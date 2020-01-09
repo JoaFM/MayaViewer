@@ -256,40 +256,29 @@ namespace Viewer_Server
 
         private void HandleCommand(string content, StateObject state)
         {
-            string[] CommandsList = content.Split('\n');
-            foreach (string commandItem in CommandsList)
+
+            if (content == "UE4\n")
             {
-                if (commandItem == "")
-                    continue;
+                state.StateObjType = StateObjectType.UE4;
+                NewConectionCreated(ref state);
+                Console.WriteLine("---- Making a UE4");
 
-                switch (commandItem)
+            }
+            else if (content == "MAYA")
+            {
+                state.StateObjType = StateObjectType.MAYA;
+                NewConectionCreated(ref state);
+                Console.WriteLine("---- Making a Maya client");
+            }
+            else
+            {
+                if (state.ParentClientObject != null)
                 {
-                    case "<COMMAND_WhatTypeAreYou>UE4<COMMAND_WhatTypeAreYou/>":
-                        {
-                            state.StateObjType = StateObjectType.UE4;
-                            NewConectionCreated(ref state);
-                            Console.WriteLine("---- Making a UE4");
-
-                        }
-                        break;
-                    case "<COMMAND_WhatTypeAreYou>MAYA<COMMAND_WhatTypeAreYou/>":
-                        {
-                            state.StateObjType = StateObjectType.MAYA;
-                            NewConectionCreated(ref state);
-                            Console.WriteLine("---- Making a Maya client");
-
-                        }
-                        break;
-                    default:
-                        if (state.ParentClientObject != null)
-                        {
-                            state.ParentClientObject.HandleCommand(commandItem);
-                        }
-                        else
-                        {
-                            Console.WriteLine("NULL PARENT OBJECT: state.ParentClientObject.HandleCommand(content);");
-                        }
-                        break;
+                    state.ParentClientObject.HandleCommand(content);
+                }
+                else
+                {
+                    Console.WriteLine("NULL PARENT OBJECT: state.ParentClientObject.HandleCommand(content);");
                 }
             }
         }
@@ -358,7 +347,7 @@ namespace Viewer_Server
         internal void GetClientType(StateObject newStateobj)
         {
             //TODO: this could fail if the client is down immediately on connect
-            SendTextMessage(newStateobj.workSocket, "COMMAND_WhatTypeAreYou", ResponceHeaders.Command);
+            SendTextMessage(newStateobj.workSocket, "{\"Command\": \"WhatTypeAreYou\"}", ResponceHeaders.Command);
             newStateobj.m_StateObjectListenState = CurrentState.WatingForResponceHeader;
         }
     }

@@ -12,6 +12,8 @@ void UCommandList::UpdateActions()
 	if (Actions.Num() == 0)
 	{
 		Actions.Add("SetCamera", &UCommandList::SetCamera);
+		Actions.Add("SetSceneDescription", &UCommandList::SetSceneDescription);
+		Actions.Add("SetObjectTransform", &UCommandList::SetObjectTransform);
 	}
 }
 
@@ -20,6 +22,8 @@ void UCommandList::HandleCommand(TSharedPtr<FJsonObject> JsonObject)
 {
 	UpdateActions();
 	FString j_Command = JsonObject->GetStringField("Command");
+	UE_LOG(LogTemp, Warning, TEXT("Process command: %s"), *j_Command);
+
 	if (Actions.Contains(j_Command))
 	{
 		(this->* (Actions[j_Command]))(JsonObject);
@@ -31,13 +35,19 @@ void UCommandList::HandleCommand(TSharedPtr<FJsonObject> JsonObject)
 }
 
 
+void UCommandList::Setup(ULiteratumSceneManager* NewViewerScene, ALiteratiumServer* server)
+{
+	m_ViewerScene = NewViewerScene;
+	m_Server = server ;
+}
+
 FVector UCommandList::ConvertLeftHandToUE4VtoV(FVector LefthandedVector) 
 {
 	return FVector(LefthandedVector.X, LefthandedVector.Z, LefthandedVector.Y);
 }
 
 
-
+// --------------- Incoming commands --------------------
 
 void UCommandList::SetCamera(TSharedPtr<FJsonObject> InputString)
 {
@@ -76,3 +86,31 @@ void UCommandList::SetCamera(TSharedPtr<FJsonObject> InputString)
 
 	m_ViewerScene->SetCamera(SetCammeraInfo);
 ;}
+
+
+void UCommandList::SetSceneDescription(TSharedPtr<FJsonObject> InputString)
+{
+	m_ViewerScene->UpdateSceneDescription(InputString);
+}
+
+
+void UCommandList::SetObjectTransform(TSharedPtr<FJsonObject> InputString)
+{
+
+	m_ViewerScene->UpdateSceneObjectTransfrom(InputString);
+}
+
+
+// --------------------  Out going Commands 
+void UCommandList::QuerySceneDecription()
+{
+	if (IsValid(m_Server))
+	{
+		m_Server->SendTextMessage("{\"Command\": \"GetSceneDescription\"}", ALiteratiumServer::ResponceHeaders::Action);
+	}
+}
+
+void UCommandList::RequestObjectTransform(FString ObjectName)
+{
+	m_Server->SendTextMessage("{\"Command\": \"GetObjectTransform\", \"ObjectName\": \"" + ObjectName + "\"}", ALiteratiumServer::ResponceHeaders::Action);
+}

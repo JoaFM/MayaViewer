@@ -23,7 +23,8 @@ namespace Viewer_Server.Clients
 
             dynamic json = JValue.Parse(content);
 
-            if (json.Command == "SetCamera")
+            //TODO make a flag that means pass on commands
+            //if (json.Command == "SetCamera")
             {
                 for (int i = m_Clients.Count -1; i >= 0; i--)
                 {

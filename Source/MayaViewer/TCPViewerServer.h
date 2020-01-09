@@ -12,19 +12,19 @@
 #include "TCPViewerServer.generated.h"
 
 class UCommandList;
-class UViewSceneManager;
+class ULiteratumSceneManager;
 
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
-class MAYAVIEWER_API UTCPViewerServer : public UActorComponent
+UCLASS(Blueprintable, ClassGroup=(Literatum), meta=(BlueprintSpawnableComponent), hideCategories = (Rendering, Replication, Input, Base, Collision, Shape, Transform, Actor))
+class MAYAVIEWER_API ALiteratiumServer : public AActor
 {
 	GENERATED_BODY()
 
 public:	
 	// Sets default values for this component's properties
-	UTCPViewerServer();
+	ALiteratiumServer();
 
 	FSocket* SocketToServer;
-
+	
 	enum class CurrentState {
 		WaitingForPackage, 
 		WatingForResponceHeader
@@ -40,13 +40,17 @@ public:
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
+	float m_SceneUpdateTimer = 0;
+
+	UPROPERTY(Blueprintable)
+	float m_SceneUpdateTimerMax = 5;
+
 
 public:	
 	// Called every frame
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = TCPViewer)
-		 UViewSceneManager* GetViewerScene();
+		 ULiteratumSceneManager* GetViewerScene();
 
 	UFUNCTION(BlueprintCallable)
 		void Test();
@@ -57,19 +61,26 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void DissconectToServer();
 
-	UFUNCTION(BlueprintCallable)
-		void SendTextMessage(FString TextToSend);
+		void SendTextMessage(FString TextToSend, ResponceHeaders ResponceType);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 		FVector GetCamPos() {return m_ActiveCameraPosition;};
 
-
-
 	void SendResponceHeader(ResponceHeaders ResponceType, int32 ResponceSize);
 
 	bool RecvSocketData(FSocket *Socket, uint32 DataSize, FString& Msg);
+
 public:
 	virtual void BeginDestroy() override;
+	virtual void Tick(float DeltaSeconds) override;
+
+protected:
+	//Commands 
+	UPROPERTY()
+		UCommandList* m_CommandList = nullptr;
+
+	UPROPERTY(VisibleAnywhere, Instanced, BlueprintReadOnly)
+		ULiteratumSceneManager* m_viewerScene = nullptr;
 
 
 private:
@@ -84,12 +95,7 @@ private:
 	int m_PackageResponceSize;
 	FVector m_ActiveCameraPosition;
 
-	//Commands 
-	UPROPERTY()
-		UCommandList* m_CommandList = nullptr;
 
-	UPROPERTY()
-		UViewSceneManager* m_viewerScene = nullptr;
 
 
 	void ProcessCommand(TSharedPtr<FJsonObject> JsonObject);

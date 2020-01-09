@@ -14,8 +14,8 @@
  * 
  */
 
-class UViewSceneManager;
-UCLASS()
+class ULiteratumSceneManager;
+UCLASS(Blueprintable)
 class MAYAVIEWER_API UCommandList : public UObject
 {
 	GENERATED_BODY()
@@ -24,23 +24,34 @@ public:
 	typedef void (UCommandList::*CommandFunctionPtrType)(TSharedPtr<FJsonObject> InputString);
 
 
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = ViewerUtils)
+		static FVector ConvertLeftHandToUE4VtoV(FVector LefthandedVector);
+
 	void HandleCommand(TSharedPtr<FJsonObject> JsonObject);
 
-	void SetViewerScene(UViewSceneManager* NewViewerScene) { m_ViewerScene = NewViewerScene; };
+	void Setup(ULiteratumSceneManager* NewViewerScene, ALiteratiumServer* server);
 
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = ViewerUtils)
-	static FVector ConvertLeftHandToUE4VtoV(FVector LefthandedVector);
 
-private:
-	TMap<FString, CommandFunctionPtrType> Actions;
 
+	// Actoions OUT
+	void QuerySceneDecription();
+	void RequestObjectTransform(FString ObjectName);
 
 private:
 	void UpdateActions();
-	// Actions
+	// Actions IN
 	void SetCamera(TSharedPtr<FJsonObject> InputString);
+	void SetSceneDescription(TSharedPtr<FJsonObject> InputString);
+	void SetObjectTransform(TSharedPtr<FJsonObject> InputString);
 
 private:
+
+	TMap<FString, CommandFunctionPtrType> Actions;
+
 	UPROPERTY()
-		UViewSceneManager* m_ViewerScene;
+		ULiteratumSceneManager* m_ViewerScene;
+
+	UPROPERTY()
+		ALiteratiumServer* m_Server;
+
 };

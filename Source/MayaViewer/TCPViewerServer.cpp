@@ -12,18 +12,19 @@
 #include "SceneManager/ViewSceneManager.h"
 
 // Sets default values for this component's properties
-UTCPViewerServer::UTCPViewerServer()
+ALiteratiumServer::ALiteratiumServer()
 {
-	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
-	// off to improve performance if you don't need them.
-	PrimaryComponentTick.bCanEverTick = true;
+
+	SetActorTickEnabled(true);
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = true;
 
 	// ...
 }
 
 
 // Called when the game starts
-void UTCPViewerServer::BeginPlay()
+void ALiteratiumServer::BeginPlay()
 {
 	Super::BeginPlay();
 
@@ -31,31 +32,18 @@ void UTCPViewerServer::BeginPlay()
 	
 }
 
-
-// Called every frame
-void UTCPViewerServer::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
-{
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	FString MSG;
-	RecvSocketData(SocketToServer,1024, MSG);
-	ProcessDataStream();
-
-	
-}
-
-UViewSceneManager* UTCPViewerServer::GetViewerScene()
+ULiteratumSceneManager* ALiteratiumServer::GetViewerScene()
 {
 	return m_viewerScene;
 }
 
-void UTCPViewerServer::Test()
+void ALiteratiumServer::Test()
 {
 
 
 }
 
-void UTCPViewerServer::ConnectToServer()
+void ALiteratiumServer::ConnectToServer()
 {
 	LoadObjects();
 	
@@ -73,7 +61,7 @@ void UTCPViewerServer::ConnectToServer()
 }
 
 
-void UTCPViewerServer::DissconectToServer()
+void ALiteratiumServer::DissconectToServer()
 {
 	if (SocketToServer == nullptr)
 	{
@@ -84,7 +72,7 @@ void UTCPViewerServer::DissconectToServer()
 	UE_LOG(LogTemp, Warning, TEXT("TCPVIEW: %s"), (successful ? TEXT("Closed Connection":TEXT("Failed to close"))));
 }
 
-void UTCPViewerServer::SendTextMessage(FString TextToSend)
+void ALiteratiumServer::SendTextMessage(FString TextToSend, ResponceHeaders ResponceType)
 {
 	if (!SocketToServer) return;
 	if (TextToSend.IsEmpty())
@@ -99,13 +87,13 @@ void UTCPViewerServer::SendTextMessage(FString TextToSend)
 	int32 size = FCString::Strlen(serializedChar);
 	int32 sent = 0;
 
-	SendResponceHeader(ResponceHeaders::SetType, size);
+	SendResponceHeader(ResponceType, size);
 	bool successful = SocketToServer->Send((uint8*)TCHAR_TO_UTF8(serializedChar), size, sent);
-	UE_LOG(LogTemp, Warning, TEXT("TCPVIEW: %s"), (successful ? TEXT("Sent":TEXT("Fail to Send"))));
+	UE_LOG(LogTemp, Warning, TEXT("TCPVIEW: %s"), (successful ? TEXT("Sent"):TEXT("Fail to Send")));
 	
 }
 
-void UTCPViewerServer::SendResponceHeader(ResponceHeaders ResponceType, int32 ResponceSize)
+void ALiteratiumServer::SendResponceHeader(ResponceHeaders ResponceType, int32 ResponceSize)
 {
 	if (!SocketToServer) return;
 
@@ -117,7 +105,7 @@ void UTCPViewerServer::SendResponceHeader(ResponceHeaders ResponceType, int32 Re
 	SocketToServer->Send((uint8*)(&ResponceSize), sizeof(int), sent);
 }
 
-bool UTCPViewerServer::RecvSocketData(FSocket *Socket, uint32 DataSize, FString& Msg)
+bool ALiteratiumServer::RecvSocketData(FSocket *Socket, uint32 DataSize, FString& Msg)
 {
 	if(!Socket) return false;
 	if (!SocketToServer->HasPendingData(DataSize)) return false;
@@ -151,18 +139,42 @@ bool UTCPViewerServer::RecvSocketData(FSocket *Socket, uint32 DataSize, FString&
 }
 
 
-void UTCPViewerServer::BeginDestroy()
+void ALiteratiumServer::BeginDestroy()
 {
 	Super::BeginDestroy();
 	DissconectToServer();
 }
 
-void UTCPViewerServer::ProcessDataStream()
+void ALiteratiumServer::Tick(float DeltaSeconds)
 {
+	Super::Tick(DeltaSeconds);
+
+	FString MSG;
+	RecvSocketData(SocketToServer, 1024, MSG);
+	ProcessDataStream();
+
+	if (IsValid(m_CommandList) && m_SceneUpdateTimer > m_SceneUpdateTimerMax)
+	{
+		m_SceneUpdateTimer = 0;
+		m_CommandList->QuerySceneDecription();
+	}
+	else
+	{
+		m_SceneUpdateTimer += DeltaSeconds;
+	}
+}
+
+void ALiteratiumServer::ProcessDataStream()
+{
+
 	bool dataProcessed = true;
 	if (!m_CurrentDataStream.Num()) return;
+	UE_LOG(LogTemp, Log , TEXT(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Processing <<<<<<<<<<<<<<<<<<<<<<<<<<<"));
+
 	while (dataProcessed)
 	{
+		dataProcessed = false;
+
 		if (m_currentState == CurrentState::WatingForResponceHeader)
 		{
 			if (m_CurrentDataStream.Num() < m_ResponceHeaderSize) return;
@@ -182,52 +194,44 @@ void UTCPViewerServer::ProcessDataStream()
 		else if (m_currentState == CurrentState::WaitingForPackage)
 		{
 			if (m_CurrentDataStream.Num() < m_PackageResponceSize) return;
+			TArray<char> Command = RemoveRangeOnDataStream(m_PackageResponceSize);
+			dataProcessed = true;
 
+			Command.Add(0);
+			FString CommandString = FString(Command.GetData());
+			TSharedPtr<FJsonObject> CommandJson = MakeShareable(new FJsonObject());
+			TSharedRef<TJsonReader<>> JsonReader = TJsonReaderFactory<>::Create(CommandString);
+			if (!FJsonSerializer::Deserialize(JsonReader, CommandJson) && CommandJson.IsValid())
+			{
+				// LOG failed to deserilse command json
+			}
 
 			if (m_PackageResponceType == ResponceHeaders::Command)
 			{
-
-				TArray<char> Command = RemoveRangeOnDataStream(m_PackageResponceSize);
-				Command.Add(0);
-
-				FString CommandString = FString(Command.GetData());
-				if (CommandString == "COMMAND_WhatTypeAreYou")
+				if (CommandJson->GetStringField("Command") == "WhatTypeAreYou")
 				{
 					m_currentState = CurrentState::WatingForResponceHeader;
-					SendTextMessage("<COMMAND_WhatTypeAreYou>UE4<COMMAND_WhatTypeAreYou/>");
+					SendTextMessage("UE4",ResponceHeaders::SetType);
 				}
-				dataProcessed = true;
 
 			}
 			else if (m_PackageResponceType == ResponceHeaders::Action)
 			{
-				TArray<char> Command = RemoveRangeOnDataStream(m_PackageResponceSize);
-				Command.Add(0);
 
-				FString CommandString = FString(Command.GetData());
 				m_currentState = CurrentState::WatingForResponceHeader;
-
-				//Create a json object to store the information from the json string
-				//The json reader is used to deserialize the json object later on
-				TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject());
-				TSharedRef<TJsonReader<>> JsonReader = TJsonReaderFactory<>::Create(CommandString);
-
-				if (FJsonSerializer::Deserialize(JsonReader, JsonObject) && JsonObject.IsValid())
+				FJsonSerializer::Deserialize(JsonReader, CommandJson);
+				if (CommandJson.IsValid())
 				{
-					ProcessCommand(JsonObject);
+					ProcessCommand(CommandJson);
 				}
-
-				dataProcessed = true;
-
 			}
 		}
-		dataProcessed = false;
 
 	}
 	
 }
 
-TArray<char> UTCPViewerServer::RemoveRangeOnDataStream(int Size)
+TArray<char> ALiteratiumServer::RemoveRangeOnDataStream(int Size)
 {
 	TArray<char> Command;
 	Command.AddUninitialized(Size);
@@ -238,24 +242,24 @@ TArray<char> UTCPViewerServer::RemoveRangeOnDataStream(int Size)
 	return Command;
 }
 
-void UTCPViewerServer::ProcessCommand(TSharedPtr<FJsonObject> JsonObject)
+void ALiteratiumServer::ProcessCommand(TSharedPtr<FJsonObject> JsonObject)
 {
 	LoadObjects();
 	
 	m_CommandList->HandleCommand(JsonObject);
 }
 
-void UTCPViewerServer::LoadObjects()
+void ALiteratiumServer::LoadObjects()
 {
 	if (m_viewerScene == nullptr)
 	{
-		m_viewerScene = NewObject<UViewSceneManager>();
-
+		m_viewerScene = NewObject<ULiteratumSceneManager>();
 	}
 	if (!IsValid(m_CommandList))
 	{
 		m_CommandList = NewObject<UCommandList>();
 	}
-	m_CommandList->SetViewerScene(m_viewerScene);
+	m_CommandList->Setup(m_viewerScene, this);
+	m_viewerScene->Setup(m_CommandList, GetWorld());
 
 }

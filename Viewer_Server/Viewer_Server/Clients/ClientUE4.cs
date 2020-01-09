@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -17,7 +18,26 @@ namespace Viewer_Server.Clients
 
         internal override void HandleCommand(string content)
         {
-            Console.WriteLine("COMMAND|"+ content);
+            Console.WriteLine("Get Action from UE4" + content);
+
+            dynamic json = JValue.Parse(content);
+
+           // if (json.Command == "GetSceneDescription")
+            {
+                for (int i = m_Clients.Count - 1; i >= 0; i--)
+                {
+                    StateObject ClientState = (m_Clients[i].m_ClientState.Target as StateObject);
+                    if (ClientState == null || !ClientState.IsActive())
+                    {
+                        m_Clients.Remove(m_Clients[i]);
+                    }
+                    else if (ClientState.StateObjType == StateObjectType.MAYA)
+                    {
+                        m_ASSView.SendData(ClientState, content, ResponceHeaders.Action);
+                    }
+                }
+
+            }
 
         }
     }

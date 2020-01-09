@@ -5,7 +5,7 @@ import socket
 import sys
 import struct
 import MayaTools
-
+import json
 
 class CurrentState: 
     WatingForResponceHeader = 1
@@ -16,7 +16,7 @@ class ResponceHeaders:
     Command = 1
     Action = 2
 
-class RVViewerClient():
+class LiteratimClient():
     OnCommandFunction = None
     isStarted = False
     serverisReady = False
@@ -58,7 +58,7 @@ class RVViewerClient():
         
         while len(readable) > 0:
             for s in readable:
-                data = s.recv(2048)
+                data = s.recv(4096*8)
                 if data:
                     self.m_IncommingData += data
                 readable, writable, exceptional = select.select(self.inputs, [], [],0)
@@ -68,34 +68,48 @@ class RVViewerClient():
     
    
     def ProcessAcumData(self):
-        if self.m_StateObjectListenState == CurrentState.WatingForResponceHeader:
-            if len(self.m_IncommingData) >= 8:
-                
-                unpacker = struct.Struct('I I')
-                self.m_nextPackageType, self.m_nextPackageSize = unpacker.unpack(self.m_IncommingData[:8])
-                
-                # Set up for next action                
-                self.m_IncommingData = self.m_IncommingData[8:]
-                self.m_StateObjectListenState = CurrentState.WaitingForPackage
-                
-                
-        if self.m_StateObjectListenState == CurrentState.WaitingForPackage:
-            if len(self.m_IncommingData) >= self.m_nextPackageSize:
-                
-                Command = self.m_IncommingData[:self.m_nextPackageSize]
-                
-                if  Command == "COMMAND_WhatTypeAreYou":
-                    print ("Responding to COMMAND_WhatTypeAreYou")
-                    self.SendMessage("<COMMAND_WhatTypeAreYou>MAYA<COMMAND_WhatTypeAreYou/>", ResponceHeaders.SetType)
-                    self.serverisReady = True
-                elif (self.OnCommandFunction != None):
-                    self.OnCommandFunction(Command)
+        ProcessedData = True
+        print ">>>>>>>>>>>>>>>>>>>>>>> Pro <<<<<<<<<<<<<<<<<<<<<<<<<<<<"
+
+        while ProcessedData:
+            ProcessedData = False
+            if self.m_StateObjectListenState == CurrentState.WatingForResponceHeader:
+                if len(self.m_IncommingData) >= 8:
                     
+                    unpacker = struct.Struct('I I')
+                    self.m_nextPackageType, self.m_nextPackageSize = unpacker.unpack(self.m_IncommingData[:8])
                     
-                # Set up for next action
-                self.m_IncommingData = self.m_IncommingData[self.m_nextPackageSize:]
-                self.m_StateObjectListenState = CurrentState.WatingForResponceHeader     
-         
+                    # Set up for next action                
+                    self.m_IncommingData = self.m_IncommingData[8:]
+                    self.m_StateObjectListenState = CurrentState.WaitingForPackage
+                    ProcessedData = True  
+                    
+            if self.m_StateObjectListenState == CurrentState.WaitingForPackage:
+                if len(self.m_IncommingData) >= self.m_nextPackageSize:
+                    
+                    Command = self.m_IncommingData[:self.m_nextPackageSize]
+                    try:
+                        CommandDict = json.loads(Command)
+                    except :
+                        print "!!!!!!!!!!!Command error!!!!!!!!!!!!!!!"
+                        print Command, "len:",len(self.m_IncommingData) , "nexSi" , self.m_nextPackageSize
+                        print self.m_IncommingData
+
+                    if  CommandDict["Command"] == "WhatTypeAreYou":
+                        print ("Responding to WhatTypeAreYou")
+                        self.SendMessage("MAYA", ResponceHeaders.SetType)
+                        self.serverisReady = True
+                    elif (self.OnCommandFunction != None):
+                        print "----------------------------------"
+                        print Command
+                        self.OnCommandFunction(CommandDict)
+                        
+                        
+                    # Set up for next action
+                    self.m_IncommingData = self.m_IncommingData[self.m_nextPackageSize:]
+                    self.m_StateObjectListenState = CurrentState.WatingForResponceHeader  
+                    ProcessedData = True   
+            
     
     def SendMessage(self, _Message, ResponceHeaders_type):
         
@@ -104,7 +118,7 @@ class RVViewerClient():
             print "Server state not ready"    
             return 
         
-        print ("SendMessage::" + _Message,ResponceHeaders_type)
+        # print ("SendMessage::" + _Message,ResponceHeaders_type)
         
         values = (ResponceHeaders_type, len(_Message))
         packer = struct.Struct('I I')
