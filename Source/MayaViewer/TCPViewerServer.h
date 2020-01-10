@@ -95,7 +95,9 @@ private:
 	int m_PackageResponceSize;
 	FVector m_ActiveCameraPosition;
 
-
+	float m_downloadAmount = 0;
+	float m_uploadAmount = 0;
+	float m_downloadAmountTime = 0;
 
 
 	void ProcessCommand(TSharedPtr<FJsonObject> JsonObject);

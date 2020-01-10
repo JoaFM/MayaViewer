@@ -69,7 +69,6 @@ class LiteratimClient():
    
     def ProcessAcumData(self):
         ProcessedData = True
-        print ">>>>>>>>>>>>>>>>>>>>>>> Pro <<<<<<<<<<<<<<<<<<<<<<<<<<<<"
 
         while ProcessedData:
             ProcessedData = False

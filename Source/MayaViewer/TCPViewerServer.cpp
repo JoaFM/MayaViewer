@@ -11,6 +11,9 @@
 #include "NetInfo/CommandList.h"
 #include "SceneManager/ViewSceneManager.h"
 
+#include <EngineGlobals.h>
+#include <Runtime/Engine/Classes/Engine/Engine.h>
+
 // Sets default values for this component's properties
 ALiteratiumServer::ALiteratiumServer()
 {
@@ -56,7 +59,8 @@ void ALiteratiumServer::ConnectToServer()
 	addr->SetPort(65432);
 
 	bool connected = SocketToServer->Connect(*addr);
-	UE_LOG(LogTemp, Warning, TEXT("TCPVIEW: %s"), (connected ? TEXT("Connected":TEXT("Fail to Connect"))));
+
+	GEngine->AddOnScreenDebugMessage(1, 5.f, FColor::Red, TEXT("ConnectToServer"));
 
 }
 
@@ -70,6 +74,14 @@ void ALiteratiumServer::DissconectToServer()
 	}
 	bool successful = SocketToServer->Close();
 	UE_LOG(LogTemp, Warning, TEXT("TCPVIEW: %s"), (successful ? TEXT("Closed Connection":TEXT("Failed to close"))));
+	if (successful)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("DissconectToServer Sucsess"));
+	}
+	else
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("DissconectToServer Failed"));
+	}
 }
 
 void ALiteratiumServer::SendTextMessage(FString TextToSend, ResponceHeaders ResponceType)
@@ -86,6 +98,7 @@ void ALiteratiumServer::SendTextMessage(FString TextToSend, ResponceHeaders Resp
 	TCHAR *serializedChar = serialized.GetCharArray().GetData();
 	int32 size = FCString::Strlen(serializedChar);
 	int32 sent = 0;
+	m_uploadAmount += size;
 
 	SendResponceHeader(ResponceType, size);
 	bool successful = SocketToServer->Send((uint8*)TCHAR_TO_UTF8(serializedChar), size, sent);
@@ -103,6 +116,8 @@ void ALiteratiumServer::SendResponceHeader(ResponceHeaders ResponceType, int32 R
 	int32 sent = 0;
 	SocketToServer->Send((uint8*)(&HeaderType), sizeof(int), sent);
 	SocketToServer->Send((uint8*)(&ResponceSize), sizeof(int), sent);
+
+	m_uploadAmount += 8;
 }
 
 bool ALiteratiumServer::RecvSocketData(FSocket *Socket, uint32 DataSize, FString& Msg)
@@ -118,6 +133,7 @@ bool ALiteratiumServer::RecvSocketData(FSocket *Socket, uint32 DataSize, FString
 	int32 BytesRead = 0;
 	if (Socket->Recv(Datagram->GetData(), Datagram->Num(), BytesRead))
 	{
+		m_downloadAmount += (float)BytesRead;
 		//Data[BytesRead] = '\0';
 		//Msg = UTF8_TO_TCHAR(Data);
 		if (BytesRead)
@@ -161,6 +177,16 @@ void ALiteratiumServer::Tick(float DeltaSeconds)
 	else
 	{
 		m_SceneUpdateTimer += DeltaSeconds;
+	}
+
+	m_downloadAmountTime += DeltaSeconds;
+	if (m_downloadAmountTime > 1.0f)
+	{
+		GEngine->AddOnScreenDebugMessage(5, 1.f, FColor::Green, FString::Printf(TEXT("down \t %s kbs"),* FString::SanitizeFloat(m_downloadAmount / 1024.0f)));
+		GEngine->AddOnScreenDebugMessage(6, 1.f, FColor::Red, FString::Printf(TEXT("Up   \t %s kbs"), *FString::SanitizeFloat(m_uploadAmount / 1024.0f)));
+
+		m_downloadAmountTime = 0;
+		m_downloadAmount = m_uploadAmount= 0;
 	}
 }
 
