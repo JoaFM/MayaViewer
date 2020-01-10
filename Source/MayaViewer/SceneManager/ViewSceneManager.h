@@ -6,11 +6,11 @@
 #include "UObject/NoExportTypes.h"
 #include "NetInfo/NetCameraInfo.h"
 #include "JsonObject.h"
-#include "Actors/LiteratumActorBase.h"
 #include "ViewSceneManager.generated.h"
 
 
 class UCommandList;
+class ALiteratumActorBase;
 
 USTRUCT(BlueprintType)
 struct  FSceneDescription 
@@ -42,7 +42,6 @@ public:
 };
 
 
-
 /**
  * 
  */
@@ -57,7 +56,12 @@ public:
 	void UpdateSceneDescription(TSharedPtr<FJsonObject> InputJsonObject);
 	void UpdateSceneObjectTransfrom(TSharedPtr<FJsonObject> InputString);
 	void RequestObjectTransform(FString ObjectName);
+	void RequestObjectMeta(FString ObjectName);
 	void Setup(UCommandList* m_CommandList, UWorld* ParentWorld);
+	void SetObjectMeta(TSharedPtr<FJsonObject> InputJsonObject);
+
+	FVector MayaToUE4SpacePosition(FVector InPosition) { return FVector(InPosition.X,InPosition.Z,InPosition.Y); }
+
 public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)

@@ -43,13 +43,12 @@ ULiteratumSceneManager* ALiteratiumServer::GetViewerScene()
 void ALiteratiumServer::Test()
 {
 
-
 }
+
 
 void ALiteratiumServer::ConnectToServer()
 {
 	LoadObjects();
-	
 
 	SocketToServer = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->CreateSocket(NAME_Stream, TEXT("default"), false);
 
@@ -62,6 +61,12 @@ void ALiteratiumServer::ConnectToServer()
 
 	GEngine->AddOnScreenDebugMessage(1, 5.f, FColor::Red, TEXT("ConnectToServer"));
 
+	//FMeshObjectMeta _Test;
+	//_Test.Min = FVector::OneVector;
+	//_Test.Max = -FVector::OneVector;
+	//FString TestText;
+	//FJsonObjectConverter::UStructToJsonObjectString(_Test, TestText);
+	//GEngine->AddOnScreenDebugMessage(1, 5.f, FColor::Red, TEXT("ConnectToServer"));
 }
 
 

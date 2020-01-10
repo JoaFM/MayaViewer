@@ -14,6 +14,7 @@ void UCommandList::UpdateActions()
 		Actions.Add("SetCamera", &UCommandList::SetCamera);
 		Actions.Add("SetSceneDescription", &UCommandList::SetSceneDescription);
 		Actions.Add("SetObjectTransform", &UCommandList::SetObjectTransform);
+		Actions.Add("SetObjectMeta", &UCommandList::SetObjectMeta);
 	}
 }
 
@@ -87,6 +88,12 @@ void UCommandList::SetCamera(TSharedPtr<FJsonObject> InputString)
 	m_ViewerScene->SetCamera(SetCammeraInfo);
 ;}
 
+void UCommandList::SetObjectMeta(TSharedPtr<FJsonObject> InputString)
+{
+	m_ViewerScene->SetObjectMeta(InputString);
+}
+
+
 
 void UCommandList::SetSceneDescription(TSharedPtr<FJsonObject> InputString)
 {
@@ -96,7 +103,6 @@ void UCommandList::SetSceneDescription(TSharedPtr<FJsonObject> InputString)
 
 void UCommandList::SetObjectTransform(TSharedPtr<FJsonObject> InputString)
 {
-
 	m_ViewerScene->UpdateSceneObjectTransfrom(InputString);
 }
 
@@ -104,13 +110,19 @@ void UCommandList::SetObjectTransform(TSharedPtr<FJsonObject> InputString)
 // --------------------  Out going Commands 
 void UCommandList::QuerySceneDecription()
 {
-	if (IsValid(m_Server))
-	{
-		m_Server->SendTextMessage("{\"Command\": \"GetSceneDescription\"}", ALiteratiumServer::ResponceHeaders::Action);
-	}
+	if (!IsValid(m_Server)) return;
+	m_Server->SendTextMessage("{\"Command\": \"GetSceneDescription\"}", ALiteratiumServer::ResponceHeaders::Action);
 }
 
 void UCommandList::RequestObjectTransform(FString ObjectName)
 {
+	if (!IsValid(m_Server)) return;
 	m_Server->SendTextMessage("{\"Command\": \"GetObjectTransform\", \"ObjectName\": \"" + ObjectName + "\"}", ALiteratiumServer::ResponceHeaders::Action);
+}
+
+void UCommandList::RequestObjectMeta(FString ObjectName)
+{
+	if (!IsValid(m_Server)) return;
+	m_Server->SendTextMessage("{\"Command\": \"GetObjectMeta\", \"ObjectName\": \"" + ObjectName + "\"}", ALiteratiumServer::ResponceHeaders::Action);
+
 }

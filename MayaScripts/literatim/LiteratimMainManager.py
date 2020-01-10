@@ -44,15 +44,12 @@ class RVViewManager():
         while self.ShouldTick: 
             time.sleep(1)
             utils.executeDeferred(self.Tick)
-            # always use executeDeferred or evalDeferredInMainThreadWithResult if you're running a thread in Maya!
     
     def Tick(self):
-        print("---Tick---")
         self.UpdateCamera()
         self.viewClient.Tick()
         
     def OnCommand(self, Command):
-        print "-----------"
         print Command
          
         if (Command["Command"] == "GetSceneDescription"):
@@ -63,6 +60,9 @@ class RVViewManager():
         elif  (Command["Command"] == "GetSceneDescription"):
             print ("Responding to GetSceneDescription")
             self.viewClient.SendMessage(self.scene.getSceneDescriptionJsonCommand(), LiteratimClient.ResponceHeaders.Command)
+        elif  (Command["Command"] == "GetObjectMeta"):
+            print ("Responding to GetObjectMeta")
+            self.viewClient.SendMessage(self.scene.getObjectMeshMeta(Command["ObjectName"]), LiteratimClient.ResponceHeaders.Command)
             
         else:
             print "There was a engored command " + str(Command)

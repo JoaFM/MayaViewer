@@ -14,7 +14,9 @@
 class UCommandList;
 class ULiteratumSceneManager;
 
-UCLASS(Blueprintable, ClassGroup=(Literatum), meta=(BlueprintSpawnableComponent), hideCategories = (Rendering, Replication, Input, Base, Collision, Shape, Transform, Actor))
+
+
+UCLASS(Blueprintable, ClassGroup=(Literatum), meta=(BlueprintSpawnableComponent), hideCategories = (Rendering, Replication, Input, Base, Collision, Shape, Transform, Actor, LOD, Cooking))
 class MAYAVIEWER_API ALiteratiumServer : public AActor
 {
 	GENERATED_BODY()

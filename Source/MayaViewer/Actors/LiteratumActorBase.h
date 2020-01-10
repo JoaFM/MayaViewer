@@ -8,6 +8,8 @@
 
 
 class ULiteratumSceneManager;
+class UStaticMeshComponent;
+
 
 UCLASS()
 class MAYAVIEWER_API ALiteratumActorBase : public AActor
@@ -18,27 +20,29 @@ public:
 	// Sets default values for this actor's properties
 	ALiteratumActorBase();
 
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+
+
+	UPROPERTY()
+		ULiteratumSceneManager* m_SceneManager;
 public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+
 
 	void SetTransform(FTransform newTransform);
 	void Setup(FString ObjectName, ULiteratumSceneManager* SceneManager);
+	virtual void OnConnect() {};
+	FString GetObjectName() const { return m_ObjectName; }
 
 private:
 	bool m_TransfromSet = false;
-	
 	FTransform m_ActorTransform;
 	FString m_ObjectName;
 	
-	UPROPERTY()
-		ULiteratumSceneManager* m_SceneManager;
-	
-	UPROPERTY()
-		UStaticMeshComponent* m_meshComp;
+
+
 
 };

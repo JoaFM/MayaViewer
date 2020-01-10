@@ -12,7 +12,8 @@ Saved
 *.suo
 *.xcodeproj
 *.xcworkspace
+*.pyc
 
 Viewer_Server/Viewer_Server/bin
 Viewer_Server/Viewer_Server/obj
-MayaViewer/*.pyc
+MayaScripts/literatim/*.pyc

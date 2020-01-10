@@ -36,11 +36,13 @@ public:
 	// Actoions OUT
 	void QuerySceneDecription();
 	void RequestObjectTransform(FString ObjectName);
+	void RequestObjectMeta(FString ObjectName);
 
 private:
 	void UpdateActions();
 	// Actions IN
 	void SetCamera(TSharedPtr<FJsonObject> InputString);
+	void SetObjectMeta(TSharedPtr<FJsonObject> InputString);
 	void SetSceneDescription(TSharedPtr<FJsonObject> InputString);
 	void SetObjectTransform(TSharedPtr<FJsonObject> InputString);
 

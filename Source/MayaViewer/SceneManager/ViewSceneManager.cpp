@@ -6,7 +6,43 @@
 #include "SharedPointer.h"
 #include "NetInfo/CommandList.h"
 #include "Engine/World.h"
+#include "Actors/LiterarumMesh.h"
 
+
+void ULiteratumSceneManager::Setup(UCommandList* CommandList, UWorld* ParentWorld)
+{
+	m_CommandList = CommandList;
+	m_ParentWorld = ParentWorld;
+}
+
+
+void ULiteratumSceneManager::SetObjectMeta(TSharedPtr<FJsonObject> InputJsonObject)
+{
+	FMeshObjectMeta NewMeta;
+	FJsonObjectConverter::JsonObjectToUStruct(InputJsonObject.ToSharedRef(), &NewMeta, 0, 0);
+	NewMeta.Min = MayaToUE4SpacePosition(NewMeta.Min);
+	NewMeta.Max = MayaToUE4SpacePosition(NewMeta.Max);
+
+	if (m_SceneActors.Contains(NewMeta.ObjectName))
+	{
+		ALiterarumMesh* LiteratimMesh = (ALiterarumMesh*)m_SceneActors[NewMeta.ObjectName];
+		
+
+		if (IsValid(LiteratimMesh))
+		{
+			LiteratimMesh->SetMeshMeta(NewMeta);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("Can not set Meta, Object is not a mesh: %s"), *NewMeta.ObjectName);
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Could Not Find Object To Set Meta On: %s"), *NewMeta.ObjectName);
+
+	}
+}
 
 void ULiteratumSceneManager::UpdateSceneDescription(TSharedPtr<FJsonObject> InputJsonObject)
 {
@@ -25,9 +61,9 @@ void ULiteratumSceneManager::UpdateSceneDescription(TSharedPtr<FJsonObject> Inpu
 		}
 		else
 		{
-			
-			ALiteratumActorBase* NewObj = m_ParentWorld->SpawnActor<ALiteratumActorBase>(ALiteratumActorBase::StaticClass(),FTransform::Identity);
+			ALiteratumActorBase* NewObj = m_ParentWorld->SpawnActor<ALiterarumMesh>(ALiterarumMesh::StaticClass(),FTransform::Identity);
 			NewObj->Setup(ObjName, this);
+			NewObj->OnConnect();
 			m_SceneActors.Add(ObjName, NewObj);
 			objectsCreated++;
 		}
@@ -74,6 +110,7 @@ void ULiteratumSceneManager::UpdateSceneObjectTransfrom(TSharedPtr<FJsonObject> 
 	}
 }
 
+
 void ULiteratumSceneManager::RequestObjectTransform(FString ObjectName)
 {
 	if (IsValid(m_CommandList))
@@ -82,8 +119,10 @@ void ULiteratumSceneManager::RequestObjectTransform(FString ObjectName)
 	}
 }
 
-void ULiteratumSceneManager::Setup(UCommandList* CommandList, UWorld* ParentWorld)
+void ULiteratumSceneManager::RequestObjectMeta(FString ObjectName)
 {
-	m_CommandList = CommandList;
-	m_ParentWorld = ParentWorld;
+	if (IsValid(m_CommandList))
+	{
+		m_CommandList->RequestObjectMeta(ObjectName);
+	}
 }
