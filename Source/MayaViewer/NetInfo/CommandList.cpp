@@ -15,6 +15,7 @@ void UCommandList::UpdateActions()
 		Actions.Add("SetSceneDescription", &UCommandList::SetSceneDescription);
 		Actions.Add("SetObjectTransform", &UCommandList::SetObjectTransform);
 		Actions.Add("SetObjectMeta", &UCommandList::SetObjectMeta);
+		Actions.Add("SetObjectWholeData", &UCommandList::SetObjectWholeData);
 	}
 }
 
@@ -23,7 +24,7 @@ void UCommandList::HandleCommand(TSharedPtr<FJsonObject> JsonObject)
 {
 	UpdateActions();
 	FString j_Command = JsonObject->GetStringField("Command");
-	UE_LOG(LogTemp, Warning, TEXT("Process command: %s"), *j_Command);
+	UE_LOG(LogTemp, Log, TEXT("<<< Processing: %s"), *j_Command);
 
 	if (Actions.Contains(j_Command))
 	{
@@ -95,6 +96,12 @@ void UCommandList::SetObjectMeta(TSharedPtr<FJsonObject> InputString)
 
 
 
+void UCommandList::SetObjectWholeData(TSharedPtr<FJsonObject> InputString)
+{
+	m_ViewerScene->SetObjectWholeData(InputString);
+
+}
+
 void UCommandList::SetSceneDescription(TSharedPtr<FJsonObject> InputString)
 {
 	m_ViewerScene->UpdateSceneDescription(InputString);
@@ -124,5 +131,13 @@ void UCommandList::RequestObjectMeta(FString ObjectName)
 {
 	if (!IsValid(m_Server)) return;
 	m_Server->SendTextMessage("{\"Command\": \"GetObjectMeta\", \"ObjectName\": \"" + ObjectName + "\"}", ALiteratiumServer::ResponceHeaders::Action);
+
+}
+
+
+void UCommandList::RequestObjectWholeData(FString ObjectName)
+{
+	if (!IsValid(m_Server)) return;
+	m_Server->SendTextMessage("{\"Command\": \"GetObjectWholeData\", \"ObjectName\": \"" + ObjectName + "\"}", ALiteratiumServer::ResponceHeaders::Action);
 
 }

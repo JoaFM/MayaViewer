@@ -6,11 +6,20 @@
 #include "UObject/NoExportTypes.h"
 #include "NetInfo/NetCameraInfo.h"
 #include "JsonObject.h"
+
+
+#include "Materials/MaterialInstance.h"
+#include "Materials/Material.h"
+
+
 #include "ViewSceneManager.generated.h"
 
 
 class UCommandList;
 class ALiteratumActorBase;
+class UCommandList;
+class UMaterialInstance;
+class UMaterial;
 
 USTRUCT(BlueprintType)
 struct  FSceneDescription 
@@ -53,14 +62,25 @@ class MAYAVIEWER_API ULiteratumSceneManager : public UObject
 public:
 	FNetCameraInfo m_CameraInfo;
 
+
+	void Setup(UCommandList* m_CommandList, UWorld* ParentWorld);
+
+	//Cene
 	void UpdateSceneDescription(TSharedPtr<FJsonObject> InputJsonObject);
+	
 	void UpdateSceneObjectTransfrom(TSharedPtr<FJsonObject> InputString);
 	void RequestObjectTransform(FString ObjectName);
+	
 	void RequestObjectMeta(FString ObjectName);
-	void Setup(UCommandList* m_CommandList, UWorld* ParentWorld);
 	void SetObjectMeta(TSharedPtr<FJsonObject> InputJsonObject);
+	
+	void SetObjectWholeData (TSharedPtr<FJsonObject> InputJsonObject);
+	void RequestObjectWholeData(FString ObjectName);
 
 	FVector MayaToUE4SpacePosition(FVector InPosition) { return FVector(InPosition.X,InPosition.Z,InPosition.Y); }
+
+	UMaterialInstance* GetMaterialInstanceFromContent(FString materials);
+	UMaterial* GetMaterialFromContent(FString materials);
 
 public:
 
@@ -78,9 +98,17 @@ private:
 	UPROPERTY()
 		UWorld* m_ParentWorld;
 
+	void UpdateSceneMaterialLibrary();
 protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 		TMap<FString, ALiteratumActorBase*> m_SceneActors;
 	
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		TMap<FString, UMaterial*> m_sceneMaterials;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		TMap<FString, UMaterialInstance*> m_sceneMaterialInstances;
+
 };

@@ -1,9 +1,7 @@
 import json
 import maya.cmds as cmds 
-
-
-import maya.cmds as mc
 import maya.OpenMaya as om
+import pymel.core as pm
 
 def getLocalVecToWorldSpaceAPI(obj, vec=om.MVector.yAxis):
 
@@ -43,3 +41,23 @@ def GetCameraPosCommand():
 
     json_data = json.dumps(data)
     return json_data
+
+def getMObject(node):
+    """
+        Return the MObject for a node
+    
+        Args:
+            node: A PyNode or node name
+    """
+    if isinstance(node, pm.nt.DependNode):
+        return node.__apimobject__()
+    else:
+        sel = om.MSelectionList()
+        try:
+            sel.add(node)
+        except:
+            print "ERROR getMObject: # node does not exist or invalid arg"
+            return
+        mobj = om.MObject()
+        sel.getDependNode(0, mobj)
+        return mobj 

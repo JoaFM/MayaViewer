@@ -4,8 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "Actors/LiteratumActorBase.h"
+
+
 #include "LiterarumMesh.generated.h"
 
+
+class UProceduralMeshComponent;
 
 USTRUCT()
 struct MAYAVIEWER_API FMeshObjectMeta
@@ -28,6 +32,36 @@ public:
 		FVector Max;
 };
 
+
+USTRUCT()
+struct MAYAVIEWER_API FWholeMeshData
+{
+	GENERATED_BODY()
+
+
+public:
+
+	UPROPERTY()
+		FString Command;
+
+	UPROPERTY()
+		FString ObjectName;
+
+	UPROPERTY()
+		TArray <FString> materials;
+
+	UPROPERTY()
+		TArray <int32> TriangleMateralStartStop;
+
+	UPROPERTY()
+		TArray<int32> materialsTriangles;
+
+	UPROPERTY()
+		TArray<FVector> VertexPositions;
+	
+
+
+};
 /**
  * 
  */
@@ -42,11 +76,12 @@ public:
 	virtual void OnConnect() override;
 	virtual void Tick(float DeltaSeconds) override;
 	void SetMeshMeta(FMeshObjectMeta& NewMeta);
+	void SetWholeMeshData(FWholeMeshData& NewData);
 
 protected:
-	UPROPERTY()
-		UStaticMeshComponent* m_meshComp;
 
+	UPROPERTY(VisibleAnywhere)
+		UProceduralMeshComponent * m_procMesh;
 
 private:
 	FBox m_MeshBounds;

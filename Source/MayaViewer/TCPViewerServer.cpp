@@ -13,6 +13,8 @@
 
 #include <EngineGlobals.h>
 #include <Runtime/Engine/Classes/Engine/Engine.h>
+#include "FileManagerGeneric.h"
+#include "Materials/Material.h"
 
 // Sets default values for this component's properties
 ALiteratiumServer::ALiteratiumServer()
@@ -67,6 +69,25 @@ void ALiteratiumServer::ConnectToServer()
 	//FString TestText;
 	//FJsonObjectConverter::UStructToJsonObjectString(_Test, TestText);
 	//GEngine->AddOnScreenDebugMessage(1, 5.f, FColor::Red, TEXT("ConnectToServer"));
+
+
+
+// 	TArray<FString> Filenames;
+// 	FPackageName::FindPackagesInDirectory(Filenames, FPaths::ProjectContentDir());
+// 
+// 	TArray<FString> assetReferences;
+// 	for (TArray<FString>::TConstIterator FileItem(Filenames); FileItem; ++FileItem)
+// 	{
+// 		assetReferences.Add(FPackageName::FilenameToLongPackageName(*FileItem) + TEXT(".") + FPaths::GetBaseFilename(*FileItem));
+// 	}
+// 
+// 	for (FString path : assetReferences)
+// 	{
+// 		UMaterialInstance* test = LoadObject<UMaterialInstance>(nullptr, *path, *path);
+// 		UE_LOG(LogTemp, Error, TEXT("Files found: %s"), *path);
+// 	}
+
+
 }
 
 
@@ -107,7 +128,7 @@ void ALiteratiumServer::SendTextMessage(FString TextToSend, ResponceHeaders Resp
 
 	SendResponceHeader(ResponceType, size);
 	bool successful = SocketToServer->Send((uint8*)TCHAR_TO_UTF8(serializedChar), size, sent);
-	UE_LOG(LogTemp, Warning, TEXT("TCPVIEW: %s"), (successful ? TEXT("Sent"):TEXT("Fail to Send")));
+	UE_LOG(LogTemp, Log, TEXT("%s Sent %s"), (successful ? TEXT(">>>"):TEXT("ERROR!! : ")), serializedChar);
 	
 }
 
@@ -139,8 +160,6 @@ bool ALiteratiumServer::RecvSocketData(FSocket *Socket, uint32 DataSize, FString
 	if (Socket->Recv(Datagram->GetData(), Datagram->Num(), BytesRead))
 	{
 		m_downloadAmount += (float)BytesRead;
-		//Data[BytesRead] = '\0';
-		//Msg = UTF8_TO_TCHAR(Data);
 		if (BytesRead)
 		{
 			
@@ -150,10 +169,7 @@ bool ALiteratiumServer::RecvSocketData(FSocket *Socket, uint32 DataSize, FString
 			{
 				m_CurrentDataStream.Add(DataCpy[i]);
 			}
-
 		}
-		
-		
 	}
 
 	return true;
@@ -200,7 +216,6 @@ void ALiteratiumServer::ProcessDataStream()
 
 	bool dataProcessed = true;
 	if (!m_CurrentDataStream.Num()) return;
-	UE_LOG(LogTemp, Log , TEXT(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Processing <<<<<<<<<<<<<<<<<<<<<<<<<<<"));
 
 	while (dataProcessed)
 	{
@@ -214,7 +229,6 @@ void ALiteratiumServer::ProcessDataStream()
 
 			FMemory::Memcpy(&HeaderTypeI, m_CurrentDataStream.GetData(), 4);
 			FMemory::Memcpy(&m_PackageResponceSize, m_CurrentDataStream.GetData() + 4, 4);
-
 
 			m_PackageResponceType = (ResponceHeaders)HeaderTypeI;
 

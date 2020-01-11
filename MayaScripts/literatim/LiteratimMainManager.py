@@ -50,8 +50,6 @@ class RVViewManager():
         self.viewClient.Tick()
         
     def OnCommand(self, Command):
-        print Command
-         
         if (Command["Command"] == "GetSceneDescription"):
             self.viewClient.SendMessage(self.scene.getSceneDescriptionJsonCommand(), LiteratimClient.ResponceHeaders.Action)
         elif  (Command["Command"]  == "GetObjectTransform"):
@@ -63,7 +61,9 @@ class RVViewManager():
         elif  (Command["Command"] == "GetObjectMeta"):
             print ("Responding to GetObjectMeta")
             self.viewClient.SendMessage(self.scene.getObjectMeshMeta(Command["ObjectName"]), LiteratimClient.ResponceHeaders.Command)
-            
+        elif  (Command["Command"] == "GetObjectWholeData"):
+            print ("Responding to GetObjectWholeData")
+            self.viewClient.SendMessage(self.scene.GetObjectWholeData(Command["ObjectName"]), LiteratimClient.ResponceHeaders.Action)             
         else:
             print "There was a engored command " + str(Command)
         

@@ -14,7 +14,8 @@ public class MayaViewer : ModuleRules
             "Engine",
             "InputCore",
             "Sockets","Networking",
-            "JsonUtilities", "Json"
+            "JsonUtilities", "Json",
+            "ProceduralMeshComponent"
         });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });

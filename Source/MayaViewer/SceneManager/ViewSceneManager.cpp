@@ -7,12 +7,18 @@
 #include "NetInfo/CommandList.h"
 #include "Engine/World.h"
 #include "Actors/LiterarumMesh.h"
+#include "Materials/Material.h"
+#include "Materials/MaterialInstance.h"
 
 
 void ULiteratumSceneManager::Setup(UCommandList* CommandList, UWorld* ParentWorld)
 {
 	m_CommandList = CommandList;
 	m_ParentWorld = ParentWorld;
+
+	UpdateSceneMaterialLibrary();
+
+
 }
 
 
@@ -43,6 +49,37 @@ void ULiteratumSceneManager::SetObjectMeta(TSharedPtr<FJsonObject> InputJsonObje
 
 	}
 }
+
+void ULiteratumSceneManager::SetObjectWholeData(TSharedPtr<FJsonObject> InputJsonObject)
+{
+	FWholeMeshData NewMesh;
+	FJsonObjectConverter::JsonObjectToUStruct(InputJsonObject.ToSharedRef(), &NewMesh, 0, 0);
+	if (m_SceneActors.Contains(NewMesh.ObjectName))
+	{
+		ALiterarumMesh* LiteratimMesh = (ALiterarumMesh*)m_SceneActors[NewMesh.ObjectName];
+
+		for (int32 i = 0; i < NewMesh.VertexPositions.Num(); i++)
+		{
+			NewMesh.VertexPositions[i] = FVector(NewMesh.VertexPositions[i].X, NewMesh.VertexPositions[i].Z, NewMesh.VertexPositions[i].Y);
+		}
+
+		if (IsValid(LiteratimMesh))
+		{
+			LiteratimMesh->SetWholeMeshData(NewMesh);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("Can not set Data, Object is not a mesh: %s"), *NewMesh.ObjectName);
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Could Not Find Object To Set Data On: %s"), *NewMesh.ObjectName);
+
+	}
+}
+
+
 
 void ULiteratumSceneManager::UpdateSceneDescription(TSharedPtr<FJsonObject> InputJsonObject)
 {
@@ -81,8 +118,10 @@ void ULiteratumSceneManager::UpdateSceneDescription(TSharedPtr<FJsonObject> Inpu
 			objectsRemoved++;
 		}
 	}
-
-	UE_LOG(LogTemp, Error, TEXT("SceneDescription Updated Added(%d) removed(%d)"), objectsCreated, objectsRemoved);
+	if (objectsCreated || objectsRemoved)
+	{
+		UE_LOG(LogTemp, Error, TEXT("SceneDescription Updated Added(%d) removed(%d)"), objectsCreated, objectsRemoved);
+	}
 }
 
 void ULiteratumSceneManager::UpdateSceneObjectTransfrom(TSharedPtr<FJsonObject> InputJsonObject)
@@ -124,5 +163,62 @@ void ULiteratumSceneManager::RequestObjectMeta(FString ObjectName)
 	if (IsValid(m_CommandList))
 	{
 		m_CommandList->RequestObjectMeta(ObjectName);
+	}
+}
+
+void ULiteratumSceneManager::RequestObjectWholeData(FString ObjectName)
+{
+	if (IsValid(m_CommandList))
+	{
+		m_CommandList->RequestObjectWholeData(ObjectName);
+	}
+}
+
+UMaterialInstance* ULiteratumSceneManager::GetMaterialInstanceFromContent(FString materialName)
+{
+	if (m_sceneMaterialInstances.Contains(materialName))
+	{
+		return m_sceneMaterialInstances[materialName];
+	}
+	return nullptr;
+}
+
+
+UMaterial* ULiteratumSceneManager::GetMaterialFromContent(FString materialName)
+{
+	if (m_sceneMaterials.Contains(materialName))
+	{
+		return m_sceneMaterials[materialName];
+	}
+	return nullptr;
+}
+
+void ULiteratumSceneManager::UpdateSceneMaterialLibrary()
+{
+	TArray<FString> Filenames;
+	FPackageName::FindPackagesInDirectory(Filenames, FPaths::GameContentDir());
+
+	TArray<FString> assetReferences;
+	for (TArray<FString>::TConstIterator FileItem(Filenames); FileItem; ++FileItem)
+	{
+		assetReferences.Add(FPackageName::FilenameToLongPackageName(*FileItem) + TEXT(".") + FPaths::GetBaseFilename(*FileItem));
+	}
+
+	for (FString path : assetReferences)
+	{
+		UMaterialInstance* MatInstance = LoadObject<UMaterialInstance>(nullptr, *path, *path);
+		if (IsValid(MatInstance))
+		{
+			m_sceneMaterialInstances.Add(MatInstance->GetName(), MatInstance);
+			continue;
+		}
+		else
+		{
+			UMaterial* Mat = LoadObject<UMaterial>(nullptr, *path, *path);
+			if (IsValid(Mat))
+			{
+				m_sceneMaterials.Add(Mat->GetName(), Mat);
+			}
+		}
 	}
 }

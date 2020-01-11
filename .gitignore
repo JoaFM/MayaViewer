@@ -17,3 +17,4 @@ Saved
 Viewer_Server/Viewer_Server/bin
 Viewer_Server/Viewer_Server/obj
 MayaScripts/literatim/*.pyc
+*.pyc
