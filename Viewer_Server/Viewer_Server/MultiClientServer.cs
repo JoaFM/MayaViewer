@@ -184,11 +184,16 @@ namespace Viewer_Server
 
         private void ReadCallback(IAsyncResult ar)
         {
+          
             String content = String.Empty;
 
             // Retrieve the state object and the handler socket
             // from the asynchronous state object.
             StateObject state = (StateObject)ar.AsyncState;
+            if (!state.workSocket.Connected)
+            {
+                Console.WriteLine("Object disconnected :(" + state.StateObjType.ToString());
+            }
             Socket handler = state.workSocket;
 
             // Read data from the client socket. 
@@ -214,11 +219,9 @@ namespace Viewer_Server
                         state.m_IncommingData.RemoveRange(0, 8);
                         state.m_StateObjectListenState = CurrentState.WaitingForPackage;
 
-                        Console.WriteLine("processed a HEADER");
-                        Console.WriteLine("state.m_nextPackageType : \t\t" + state.m_nextPackageType.ToString());
-                        Console.WriteLine("state.m_nextPackageSize : \t\t" + state.m_nextPackageSize.ToString());
-
-
+                        //Console.WriteLine("processed a HEADER");
+                        //Console.WriteLine("state.m_nextPackageType : \t\t" + state.m_nextPackageType.ToString());
+                        //Console.WriteLine("state.m_nextPackageSize : \t\t" + state.m_nextPackageSize.ToString());
                     }
                 }
                 if (state.m_StateObjectListenState == CurrentState.WaitingForPackage)
@@ -292,7 +295,7 @@ namespace Viewer_Server
             {
                 handler.BeginSend(RType, 0, 4, 0, new AsyncCallback(SendCallback), handler);
                 handler.BeginSend(ResponceSize_ba, 0, 4, 0, new AsyncCallback(SendCallback), handler);
-                Console.WriteLine("--------SendResponceHeader -----------");
+                //Console.WriteLine("--------SendResponceHeader -----------");
                 return true;
             }
             catch
@@ -316,7 +319,7 @@ namespace Viewer_Server
             {
                 handler.BeginSend(byteData, 0, byteData.Length, 0,
                 new AsyncCallback(SendCallback), handler);
-                Console.WriteLine("sending " + data);
+               // Console.WriteLine("sending " + data);
                 return true;
             }
             catch
@@ -336,7 +339,7 @@ namespace Viewer_Server
 
                 // Complete sending the data to the remote device.
                 int bytesSent = handler.EndSend(ar);
-                Console.WriteLine("Sent {0} bytes to client.", bytesSent);
+                //Console.WriteLine("Sent {0} bytes to client.", bytesSent);
             }
             catch (Exception e)
             {

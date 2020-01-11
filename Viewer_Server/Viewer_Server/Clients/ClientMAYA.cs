@@ -19,8 +19,6 @@ namespace Viewer_Server.Clients
 
         internal override void HandleCommand(string content)
         {
-            Console.WriteLine("Get Action from Maya" + content);
-
             dynamic json = JValue.Parse(content);
 
             //TODO make a flag that means pass on commands

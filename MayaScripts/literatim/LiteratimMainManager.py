@@ -17,7 +17,9 @@ class RVViewManager():
         self.ShouldTick = True
         self.tick_thread = None
         self.scene = SceneManager.SceneManager()
-        
+        self.tickRate = .3
+    
+    
     def Start(self,*arg):
         print(arg)
         print ("Starting client")
@@ -42,7 +44,7 @@ class RVViewManager():
         
     def TickThread(self,*args):
         while self.ShouldTick: 
-            time.sleep(1)
+            time.sleep(self.tickRate)
             utils.executeDeferred(self.Tick)
     
     def Tick(self):

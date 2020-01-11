@@ -21,7 +21,6 @@ void ALiterarumMesh::OnConnect()
 {
 	m_SceneManager->RequestObjectTransform(GetObjectName());
 	m_SceneManager->RequestObjectMeta(GetObjectName());
-	m_SceneManager->RequestObjectWholeData(GetObjectName());
 }
 
 void ALiterarumMesh::Tick(float DeltaSeconds)
@@ -35,6 +34,18 @@ void ALiterarumMesh::Tick(float DeltaSeconds)
 		FColor(0, 0, 255), false, 1.0f
 	);
 
+	if (m_IsMeshDirty == EDirtState::Dirty)
+	{
+		m_SceneManager->RequestObjectWholeData(GetObjectName());
+		m_IsMeshDirty = EDirtState::PendingUpdate;
+	}
+
+	if (m_IsTransformDirty == EDirtState::Dirty)
+	{
+		m_SceneManager->RequestObjectTransform(GetObjectName());
+		m_IsTransformDirty = EDirtState::PendingUpdate;
+	}
+
 }
 
 void ALiterarumMesh::SetMeshMeta(FMeshObjectMeta& NewMeta)
@@ -45,8 +56,6 @@ void ALiterarumMesh::SetMeshMeta(FMeshObjectMeta& NewMeta)
 
 void ALiterarumMesh::SetWholeMeshData(FWholeMeshData& NewData)
 {
-
-	//for (const FString& Material : NewData.materials)
 	for (int32 MatIndex = 0; MatIndex < NewData.materials.Num(); MatIndex++)
 	{
 		int32 TriEnd = -1;
@@ -65,16 +74,12 @@ void ALiterarumMesh::SetWholeMeshData(FWholeMeshData& NewData)
 
 
 		TArray<int32> Triangles;
-		//Triangles.AddUninitialized(TriCount);
 		Triangles.Reserve(TriCount);
 
 		for (int32 ti = TriStart; ti < TriEnd; ti++)
-		//for (int32 ti = TriEnd -1; ti >= TriStart; ti--)
 		{
 			Triangles.Add(NewData.materialsTriangles[ti]);
 		}
-
-		//FMemory::Memcpy(Triangles.GetData(), NewData.materialsTriangles.GetData(), TriCount);
 
 		TArray<FVector> normals;
 		TArray<FVector2D> UV0;
@@ -97,11 +102,9 @@ void ALiterarumMesh::SetWholeMeshData(FWholeMeshData& NewData)
  			}
  		}
 
-
+		m_IsMeshDirty = EDirtState::Clean;
 	}
 
 	UE_LOG(LogTemp, Log, TEXT("Updated The mesh"));
-
-	
 }
 

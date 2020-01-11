@@ -4,14 +4,16 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "SceneManager/ViewSceneManager.h"
 #include "LiteratumActorBase.generated.h"
 
 
 class ULiteratumSceneManager;
 class UStaticMeshComponent;
 
+enum class EDirtState { Clean, PendingUpdate, Dirty};
 
-UCLASS()
+UCLASS(Blueprintable)
 class MAYAVIEWER_API ALiteratumActorBase : public AActor
 {
 	GENERATED_BODY()
@@ -29,6 +31,10 @@ protected:
 
 	UPROPERTY()
 		ULiteratumSceneManager* m_SceneManager;
+
+	EDirtState m_IsMeshDirty = EDirtState::Clean;
+	EDirtState m_IsTransformDirty = EDirtState::Clean;
+
 public:	
 
 
@@ -36,13 +42,19 @@ public:
 	void Setup(FString ObjectName, ULiteratumSceneManager* SceneManager);
 	virtual void OnConnect() {};
 	FString GetObjectName() const { return m_ObjectName; }
+	void UpdateChangeHash(FSceneObjectHash& ServerHash);
+
+protected:
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+		FString m_ObjectName;
 
 private:
-	bool m_TransfromSet = false;
-	FTransform m_ActorTransform;
-	FString m_ObjectName;
 	
+	bool m_TransfromSet = false;
 
+	FTransform m_ActorTransform;
+	FSceneObjectHash m_CaschedHash;
 
-
+	
 };

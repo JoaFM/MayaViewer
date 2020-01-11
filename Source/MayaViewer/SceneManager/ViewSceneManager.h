@@ -22,26 +22,39 @@ class UMaterialInstance;
 class UMaterial;
 
 USTRUCT(BlueprintType)
-struct  FSceneDescription 
+struct  FSceneObjectHash
 {
 	GENERATED_BODY()
 
 public:
 	UPROPERTY()
-		FString Command;
+		FString t;
+	
+	UPROPERTY()
+		FString h;
 
 	UPROPERTY()
-		TMap<FString, FString> SceneObjects;
+		FString c;
+
+};
+
+
+USTRUCT(BlueprintType)
+struct  FSceneDescription : public FCommandBase
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY()
+		TMap<FString, FSceneObjectHash> SceneObjects;
 };
 
 USTRUCT(BlueprintType)
-struct  FUpdateObjectTransform
+struct  FUpdateObjectTransform : public FCommandBase
 {
 	GENERATED_BODY()
 
 public:
-	UPROPERTY()
-		FString Command;
 
 	UPROPERTY()
 		FString objectName;

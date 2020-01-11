@@ -9,12 +9,8 @@
 #include "CommandList.generated.h"
 
 
-
-/**
- * 
- */
-
 class ULiteratumSceneManager;
+
 UCLASS(Blueprintable)
 class MAYAVIEWER_API UCommandList : public UObject
 {
@@ -28,11 +24,9 @@ public:
 		static FVector ConvertLeftHandToUE4VtoV(FVector LefthandedVector);
 
 	void HandleCommand(TSharedPtr<FJsonObject> JsonObject);
-
 	void Setup(ULiteratumSceneManager* NewViewerScene, ALiteratiumServer* server);
 
-
-
+public:
 	// Actoions OUT
 	void QuerySceneDecription();
 	void RequestObjectTransform(FString ObjectName);
@@ -41,6 +35,8 @@ public:
 
 private:
 	void UpdateActions();
+
+private:
 	// Actions IN
 	void SetCamera(TSharedPtr<FJsonObject> InputString);
 	void SetObjectMeta(TSharedPtr<FJsonObject> InputString);

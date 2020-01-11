@@ -94,6 +94,7 @@ void ULiteratumSceneManager::UpdateSceneDescription(TSharedPtr<FJsonObject> Inpu
 	{
 		if (m_SceneActors.Contains(ObjName))
 		{
+			m_SceneActors[ObjName]->UpdateChangeHash(NetScene.SceneObjects[ObjName]);
 			continue;
 		}
 		else

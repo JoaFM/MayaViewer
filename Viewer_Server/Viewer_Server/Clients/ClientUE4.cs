@@ -13,12 +13,10 @@ namespace Viewer_Server.Clients
             : base(ref ClientStateParam, Clientsparam, ASSView)
         {
             Console.WriteLine("MADE A ClientUE4");
-
         }
 
         internal override void HandleCommand(string content)
         {
-            Console.WriteLine("Get Action from UE4" + content);
 
             dynamic json = JValue.Parse(content);
 

@@ -24,7 +24,6 @@ void UCommandList::HandleCommand(TSharedPtr<FJsonObject> JsonObject)
 {
 	UpdateActions();
 	FString j_Command = JsonObject->GetStringField("Command");
-	UE_LOG(LogTemp, Log, TEXT("<<< Processing: %s"), *j_Command);
 
 	if (Actions.Contains(j_Command))
 	{
@@ -133,7 +132,6 @@ void UCommandList::RequestObjectMeta(FString ObjectName)
 	m_Server->SendTextMessage("{\"Command\": \"GetObjectMeta\", \"ObjectName\": \"" + ObjectName + "\"}", ALiteratiumServer::ResponceHeaders::Action);
 
 }
-
 
 void UCommandList::RequestObjectWholeData(FString ObjectName)
 {

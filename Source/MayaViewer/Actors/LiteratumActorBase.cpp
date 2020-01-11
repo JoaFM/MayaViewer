@@ -4,6 +4,7 @@
 #include "LiteratumActorBase.h"
 #include "DrawDebugHelpers.h"
 #include "ConstructorHelpers.h"
+#include "SceneManager/ViewSceneManager.h"
 
 // Sets default values
 ALiteratumActorBase::ALiteratumActorBase()
@@ -25,6 +26,7 @@ void ALiteratumActorBase::SetTransform(FTransform newTransform)
 {
 	SetActorTransform(newTransform);
 	m_TransfromSet = true;
+	m_IsTransformDirty = EDirtState::Clean;
 }
 
 
@@ -32,4 +34,24 @@ void ALiteratumActorBase::Setup(FString ObjectName, ULiteratumSceneManager* Scen
 {
 	m_ObjectName = ObjectName;
 	m_SceneManager = SceneManager;
+}
+
+void ALiteratumActorBase::UpdateChangeHash(FSceneObjectHash& ServerHash)
+{
+	if (m_CaschedHash.h != ServerHash.h)
+	{
+		UE_LOG(LogTemp, Error, TEXT("%s has A chaned hash for Mesh"), *m_ObjectName);
+
+		m_CaschedHash.h = ServerHash.h;
+		m_IsMeshDirty = EDirtState::Dirty;
+	}
+
+	if (m_CaschedHash.t != ServerHash.t)
+	{
+		UE_LOG(LogTemp, Error, TEXT("%s has A changed hash for Transform"), *m_ObjectName);
+
+		m_CaschedHash.t = ServerHash.t;
+		m_IsTransformDirty = EDirtState::Dirty;
+	}
+
 }

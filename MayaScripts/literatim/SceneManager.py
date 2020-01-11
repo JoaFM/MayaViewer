@@ -5,15 +5,41 @@ import MayaTools
 
 class SceneManager():
     def __init__(self):
-        #self._objects = set()
         self._objects = {}
+        self.UpdateList = []
+        self.MeshData = {}
+        self._transformData = {}
 
 
     def UpdateSceneDescription(self):
-        scene_transform_nodes = cmds.ls(g=1)
+        scene_transform_nodes = cmds.ls(g=1,noIntermediate=True)
+        OldList = self._objects.copy()
         self._objects.clear()
         for sceneObj in scene_transform_nodes:
-            self._objects[sceneObj] = "g" # C for camera
+            if (sceneObj in OldList):
+                self._objects[sceneObj] = OldList[sceneObj]    
+            else:
+                self._objects[sceneObj] = {"c":"g", "h":"", "t":""} # C for camera
+        self.TickMeshUpdate()
+
+
+    def TickMeshUpdate(self):
+        if ( len(self.UpdateList) == 0):
+            self.UpdateList =  self._objects.keys()
+        
+        nextMeshToUpdate = self.UpdateList.pop()
+        self.MeshData[nextMeshToUpdate] = self.GetObjectWholeData(nextMeshToUpdate)
+        self._transformData[nextMeshToUpdate] = self.getObjectTransformCommand(nextMeshToUpdate)
+        self._objects[nextMeshToUpdate] = self.UpdateHash(
+                                                        self._objects[nextMeshToUpdate],
+                                                        None,
+                                                        self.HashStr(self.MeshData[nextMeshToUpdate]),
+                                                        self.HashStr(self._transformData[nextMeshToUpdate])
+                                                    )
+
+
+    def HashStr(self, _str):
+        return str(abs(hash(_str)) % (10 ** 8) )
 
 
     def getSceneDescriptionJsonCommand(self):
@@ -23,6 +49,17 @@ class SceneManager():
         data["SceneObjects"] = self._objects 
         json_data = json.dumps(data)
         return json_data
+
+
+    def UpdateHash(self, _originalHash, _type, _meshHash, _TransformHash):
+        NewHash = _originalHash.copy()
+        if (_type is not None):
+            NewHash["c"] = _type
+        if (_meshHash is not None):
+            NewHash["h"] = _meshHash
+        if (_TransformHash is not None):
+            NewHash["t"] = _TransformHash
+        return NewHash
 
 
     def getObjectTransformCommand(self, obj_name):
@@ -80,16 +117,17 @@ class SceneManager():
         for i in range(ShaderArray.length () ):
             
             shaderGroup =om.MFnDependencyNode( ShaderArray[i])
-            shaderPlug  = shaderGroup.findPlug( "surfaceShader" );
-            
-            connectedPlugs = om.MPlugArray ();
-            
-            shaderPlug.connectedTo(connectedPlugs, True, False);
+            shaderPlug  = shaderGroup.findPlug( "surfaceShader" )
+            connectedPlugs = om.MPlugArray ()
+            shaderPlug.connectedTo(connectedPlugs, True, False)
             connectedPlugs[0].node()
             fnDN = om.MFnDependencyNode(connectedPlugs[0].node())
             #print "Material Names", i, fnDN.name()
             data["materials"].append(fnDN.name())
+            materialsTriangles.append([])
 
+        if (len(data["materials"]) == 0):
+            data["materials"].append("NONE")
             materialsTriangles.append([])
         #-----------------Material names-----------------------
         
@@ -101,7 +139,20 @@ class SceneManager():
             for CurTri  in range(TriPerFace):
                 #Pint most usefull info in a list
                 #print TriIndex, TriangleInexies[TriIndex*3:][:3],intArrayShaderIndex[FaceTrianglesIndex]
-                materialsTriangles[intArrayShaderIndex[FaceTrianglesIndex]].extend(TriangleInexies[TriIndex*3:][:3])
+                NewTris = TriangleInexies[TriIndex*3:][:3]
+                #print "intArrayShaderIndex" , intArrayShaderIndex
+                #print "FaceTrianglesIndex", FaceTrianglesIndex
+                #print "NewTris", NewTris
+
+                #print "intArrayShaderIndex[FaceTrianglesIndex]",intArrayShaderIndex[FaceTrianglesIndex]
+
+                if (intArrayShaderIndex[FaceTrianglesIndex] != -1):
+                    #print ">>>>>1"
+                    materialsTriangles[intArrayShaderIndex[FaceTrianglesIndex]].extend(NewTris)
+                else:
+                    #print "<<<<<<<<<<!= -1"
+                    materialsTriangles[0].extend(NewTris)
+                    
                 TriIndex +=1
         data["materialsTriangles"] = []   
         data["TriangleMateralStartStop"] = []

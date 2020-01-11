@@ -44,7 +44,7 @@ protected:
 	virtual void BeginPlay() override;
 	float m_SceneUpdateTimer = 0;
 
-	UPROPERTY(Blueprintable)
+	UPROPERTY(Blueprintable, EditAnywhere)
 	float m_SceneUpdateTimerMax = 5;
 
 

@@ -4,23 +4,17 @@
 
 #include "CoreMinimal.h"
 #include "Actors/LiteratumActorBase.h"
-
-
+#include "NetInfo/CommandBase.h"
 #include "LiterarumMesh.generated.h"
-
 
 class UProceduralMeshComponent;
 
 USTRUCT()
-struct MAYAVIEWER_API FMeshObjectMeta
+struct MAYAVIEWER_API FMeshObjectMeta : public FCommandBase
 {
 	GENERATED_BODY()
 
-
 public:
-
-	UPROPERTY()
-		FString Command;
 
 	UPROPERTY()
 		FString ObjectName;
@@ -34,15 +28,11 @@ public:
 
 
 USTRUCT()
-struct MAYAVIEWER_API FWholeMeshData
+struct MAYAVIEWER_API FWholeMeshData : public FCommandBase
 {
 	GENERATED_BODY()
 
-
 public:
-
-	UPROPERTY()
-		FString Command;
 
 	UPROPERTY()
 		FString ObjectName;
@@ -58,14 +48,10 @@ public:
 
 	UPROPERTY()
 		TArray<FVector> VertexPositions;
-	
-
-
 };
-/**
- * 
- */
-UCLASS()
+ 
+
+UCLASS(Blueprintable, ClassGroup = (Literatum), meta = (BlueprintSpawnableComponent), hideCategories = (Rendering, Replication, Input, Base, Input, Shape, Actor, HLOD, Cooking, Mobile, Activation, VirtualTexture))
 class MAYAVIEWER_API ALiterarumMesh : public ALiteratumActorBase
 {
 	GENERATED_BODY()
@@ -85,6 +71,5 @@ protected:
 
 private:
 	FBox m_MeshBounds;
-
 
 };
