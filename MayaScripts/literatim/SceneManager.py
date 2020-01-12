@@ -5,35 +5,44 @@ import MayaTools
 
 class SceneManager():
     def __init__(self):
-        self._objects = {}
+        self._scene_description = {}
         self.UpdateList = []
-        self.MeshData = {}
+        self._mesh_data = {}
         self._transformData = {}
 
 
     def UpdateSceneDescription(self):
         scene_transform_nodes = cmds.ls(g=1,noIntermediate=True)
-        OldList = self._objects.copy()
-        self._objects.clear()
+        OldList = self._scene_description.copy()
+        self._scene_description.clear()
         for sceneObj in scene_transform_nodes:
             if (sceneObj in OldList):
-                self._objects[sceneObj] = OldList[sceneObj]    
+                self._scene_description[sceneObj] = OldList[sceneObj]    
             else:
-                self._objects[sceneObj] = {"c":"g", "h":"", "t":""} # C for camera
+                self._scene_description[sceneObj] = {"c":"g", "h":"", "t":""} # C for camera
         self.TickMeshUpdate()
 
 
     def TickMeshUpdate(self):
+        """
+        Essentialy take One mesh every tick and see if it is up to date
+        IE make a hash and store it in hte scene description
+        """
+
+        #Loop the list
         if ( len(self.UpdateList) == 0):
-            self.UpdateList =  self._objects.keys()
+            self.UpdateList =  self._scene_description.keys()
         
+        #take one object
+        if (len(self.UpdateList) == 0):
+            return
         nextMeshToUpdate = self.UpdateList.pop()
-        self.MeshData[nextMeshToUpdate] = self.GetObjectWholeData(nextMeshToUpdate)
+        self._mesh_data[nextMeshToUpdate] = self.GetObjectWholeData(nextMeshToUpdate)
         self._transformData[nextMeshToUpdate] = self.getObjectTransformCommand(nextMeshToUpdate)
-        self._objects[nextMeshToUpdate] = self.UpdateHash(
-                                                        self._objects[nextMeshToUpdate],
+        self._scene_description[nextMeshToUpdate] = self.UpdateHash(
+                                                        self._scene_description[nextMeshToUpdate],
                                                         None,
-                                                        self.HashStr(self.MeshData[nextMeshToUpdate]),
+                                                        self.HashStr(self._mesh_data[nextMeshToUpdate]),
                                                         self.HashStr(self._transformData[nextMeshToUpdate])
                                                     )
 
@@ -46,7 +55,7 @@ class SceneManager():
         self.UpdateSceneDescription()
         data = {}
         data["Command"] = "SetSceneDescription"
-        data["SceneObjects"] = self._objects 
+        data["SceneObjects"] = self._scene_description 
         json_data = json.dumps(data)
         return json_data
 
@@ -61,12 +70,15 @@ class SceneManager():
             NewHash["t"] = _TransformHash
         return NewHash
 
+    #################################### Commands ##############################################################
 
     def getObjectTransformCommand(self, obj_name):
         data = {}
         parent_transform_name = cmds.listRelatives((obj_name), parent=True)[0]
         object_matrix= cmds.xform( parent_transform_name, q=True, matrix=True, ws=True )
+        object_scale = cmds.xform( parent_transform_name, q=True, s=True, r=True)
         data["WorldMatrix"] = object_matrix
+        data["scale"] = {"x":object_scale[0],"y":object_scale[1],"z":object_scale[2]}
         data["objectName"] = obj_name
         data["Command"] = "SetObjectTransform"
         json_data = json.dumps(data)

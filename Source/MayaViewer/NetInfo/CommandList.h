@@ -43,6 +43,7 @@ private:
 	void SetObjectWholeData(TSharedPtr<FJsonObject> InputString);
 	void SetSceneDescription(TSharedPtr<FJsonObject> InputString);
 	void SetObjectTransform(TSharedPtr<FJsonObject> InputString);
+	void WhatTypeAreYou(TSharedPtr<FJsonObject> InputString);
 
 private:
 

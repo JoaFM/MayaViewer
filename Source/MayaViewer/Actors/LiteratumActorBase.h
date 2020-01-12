@@ -11,7 +11,11 @@
 class ULiteratumSceneManager;
 class UStaticMeshComponent;
 
-enum class EDirtState { Clean, PendingUpdate, Dirty};
+enum class EDirtState {
+	Clean = 0, 
+	PendingUpdate = 1,
+	Dirty = 2
+};
 
 UCLASS(Blueprintable)
 class MAYAVIEWER_API ALiteratumActorBase : public AActor

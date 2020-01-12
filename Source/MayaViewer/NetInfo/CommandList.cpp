@@ -16,6 +16,7 @@ void UCommandList::UpdateActions()
 		Actions.Add("SetObjectTransform", &UCommandList::SetObjectTransform);
 		Actions.Add("SetObjectMeta", &UCommandList::SetObjectMeta);
 		Actions.Add("SetObjectWholeData", &UCommandList::SetObjectWholeData);
+		Actions.Add("WhatTypeAreYou", &UCommandList::WhatTypeAreYou);
 	}
 }
 
@@ -113,29 +114,38 @@ void UCommandList::SetObjectTransform(TSharedPtr<FJsonObject> InputString)
 }
 
 
+void UCommandList::WhatTypeAreYou(TSharedPtr<FJsonObject> InputString)
+{
+	if (!IsValid(m_Server)) return;
+	m_Server->SendTextMessage("UE4", ALiteratiumServer::ResponceHeaders::ServerCommand);
+
+}
+
+
+
 // --------------------  Out going Commands 
 void UCommandList::QuerySceneDecription()
 {
 	if (!IsValid(m_Server)) return;
-	m_Server->SendTextMessage("{\"Command\": \"GetSceneDescription\"}", ALiteratiumServer::ResponceHeaders::Action);
+	m_Server->SendTextMessage("{\"Command\": \"GetSceneDescription\"}", ALiteratiumServer::ResponceHeaders::Command);
 }
 
 void UCommandList::RequestObjectTransform(FString ObjectName)
 {
 	if (!IsValid(m_Server)) return;
-	m_Server->SendTextMessage("{\"Command\": \"GetObjectTransform\", \"ObjectName\": \"" + ObjectName + "\"}", ALiteratiumServer::ResponceHeaders::Action);
+	m_Server->SendTextMessage("{\"Command\": \"GetObjectTransform\", \"ObjectName\": \"" + ObjectName + "\"}", ALiteratiumServer::ResponceHeaders::Command);
 }
 
 void UCommandList::RequestObjectMeta(FString ObjectName)
 {
 	if (!IsValid(m_Server)) return;
-	m_Server->SendTextMessage("{\"Command\": \"GetObjectMeta\", \"ObjectName\": \"" + ObjectName + "\"}", ALiteratiumServer::ResponceHeaders::Action);
+	m_Server->SendTextMessage("{\"Command\": \"GetObjectMeta\", \"ObjectName\": \"" + ObjectName + "\"}", ALiteratiumServer::ResponceHeaders::Command);
 
 }
 
 void UCommandList::RequestObjectWholeData(FString ObjectName)
 {
 	if (!IsValid(m_Server)) return;
-	m_Server->SendTextMessage("{\"Command\": \"GetObjectWholeData\", \"ObjectName\": \"" + ObjectName + "\"}", ALiteratiumServer::ResponceHeaders::Action);
+	m_Server->SendTextMessage("{\"Command\": \"GetObjectWholeData\", \"ObjectName\": \"" + ObjectName + "\"}", ALiteratiumServer::ResponceHeaders::Command);
 
 }

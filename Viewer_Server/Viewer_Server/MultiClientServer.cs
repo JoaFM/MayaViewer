@@ -25,18 +25,18 @@ namespace Viewer_Server
 
     public enum ResponceHeaders
     {
-        SetType = 0,
+        ServerCommand = 0,
         Command = 1,
-        Action = 2,
     }
 
     // State object for reading client data asynchronously
     public class StateObject
     {
         // Client  socket.
-        public Socket workSocket = null;
+        private Socket _workSocket = null;
+        public Socket workSocket {get {return _workSocket;}}
         // Size of receive buffer.
-        public const int BufferSize = 1024;
+        public const int BufferSize = 4096*4;
         // Receive buffer.
         public byte[] buffer = new byte[BufferSize];
         public List<byte> m_IncommingData = new List<byte>();
@@ -45,20 +45,19 @@ namespace Viewer_Server
         public ClientBase ParentClientObject = null;
         public CurrentState m_StateObjectListenState = CurrentState.WatingForResponceHeader;
 
-        public ResponceHeaders m_nextPackageType = ResponceHeaders.SetType;
+        public ResponceHeaders m_nextPackageType = ResponceHeaders.ServerCommand;
         public int m_nextPackageSize = -1;
+        private bool IsAlive = true;
 
         internal bool IsPackageSizeValidToProcess()
         {
             return m_IncommingData.Count >= m_nextPackageSize;
         }
 
-        private bool IsAlive = true;
-
         internal void Deactivate()
         {
             IsAlive = false;
-            workSocket = null;
+            _workSocket = null;
         }
 
         internal bool IsActive()
@@ -66,12 +65,14 @@ namespace Viewer_Server
             return IsAlive;
         }
 
-
+        internal void SetWorkSocket(Socket handler)
+        {
+            _workSocket = handler;
+        }
     }
 
     public class AsynchronousServer
     {
-        private readonly int m_CommandSize = 32;
 
         // Public events
         public delegate void NewConnectionCreated(ref StateObject NewStateobj);
@@ -91,7 +92,6 @@ namespace Viewer_Server
         public void StartServer()
         {
             StartListening();
-
         }
 
         private void StartListening()
@@ -148,16 +148,14 @@ namespace Viewer_Server
                 listener.BeginAccept(
                     new AsyncCallback(AcceptListenCallback),
                     listener);
-
+                //TODO: I took this out ... Should I have ???
                 // Wait until a connection is made before continuing.
                 //allDone.WaitOne();
-
             }
             catch (Exception e)
             {
                 Console.WriteLine(e.ToString());
             }
-
         }
 
         private void AcceptListenCallback(IAsyncResult ar)
@@ -172,38 +170,42 @@ namespace Viewer_Server
             // Create the state object.
             StateObject state = new StateObject();
             StateObjectList.Add(state);
-            state.workSocket = handler;
+            state.SetWorkSocket(handler);
             GetClientType(state);
 
             handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
                 new AsyncCallback(ReadCallback), state);
-
 
             ListenForNextConnection();
         }
 
         private void ReadCallback(IAsyncResult ar)
         {
-          
             String content = String.Empty;
 
             // Retrieve the state object and the handler socket
             // from the asynchronous state object.
             StateObject state = (StateObject)ar.AsyncState;
-            if (!state.workSocket.Connected)
+            if (!state.IsActive())
             {
-                Console.WriteLine("Object disconnected :(" + state.StateObjType.ToString());
+                return;
             }
-            Socket handler = state.workSocket;
 
-            // Read data from the client socket. 
-            int bytesRead = handler.EndReceive(ar);
+            Socket handler = state.workSocket;
+            int bytesRead = 0;
+            try
+            {
+                // Read data from the client socket. 
+                bytesRead = handler.EndReceive(ar);
+            }
+            catch (SocketException e)
+            {
+                Console.WriteLine("Error in ReadCallback, Server probably down :( ->>" + e.Message.ToString());
+                return;
+            }
 
             if (bytesRead > 0)
             {
-                // There  might be more data, so store the data received so far.
-
-
                 // copy new data
                 for (int i = 0; i < bytesRead; i++)
                 {
@@ -218,24 +220,21 @@ namespace Viewer_Server
                         state.m_nextPackageSize = BitConverter.ToInt32(state.m_IncommingData.ToArray(), 4);
                         state.m_IncommingData.RemoveRange(0, 8);
                         state.m_StateObjectListenState = CurrentState.WaitingForPackage;
-
-                        //Console.WriteLine("processed a HEADER");
-                        //Console.WriteLine("state.m_nextPackageType : \t\t" + state.m_nextPackageType.ToString());
-                        //Console.WriteLine("state.m_nextPackageSize : \t\t" + state.m_nextPackageSize.ToString());
                     }
                 }
+
                 if (state.m_StateObjectListenState == CurrentState.WaitingForPackage)
                 {
                     if (state.IsPackageSizeValidToProcess())
                     {
-                        if (state.m_nextPackageType == ResponceHeaders.SetType)
+                        if (state.m_nextPackageType == ResponceHeaders.ServerCommand)
                         {
                             string command = Encoding.ASCII.GetString(state.m_IncommingData.ToArray(), 0, state.m_nextPackageSize);
-                            HandleCommand(command, state);
+                            HandleServerCommand(command, state);
                             state.m_IncommingData.RemoveRange(0, state.m_nextPackageSize);
                             state.m_StateObjectListenState = CurrentState.WatingForResponceHeader;
                         }
-                        else
+                        else if (state.m_nextPackageType == ResponceHeaders.Command)
                         {
                             if (state.ParentClientObject != null)
                             {
@@ -249,23 +248,30 @@ namespace Viewer_Server
                     }
                 }
 
+                if (handler != null && handler.Connected)
                 {
                     // Not all data received. Get more.
-                    handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
-                    new AsyncCallback(ReadCallback), state);
+                    try
+                    {
+                        handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback(ReadCallback), state);
+                    }
+                    catch (SocketException e)
+                    {
+                        Console.WriteLine("Error in Getting more data, Server probably down :( ->>" + e.Message.ToString());
+                        return;
+                    }
                 }
             }
         }
 
-        private void HandleCommand(string content, StateObject state)
-        {
 
-            if (content == "UE4\n")
+        private void HandleServerCommand(string content, StateObject state)
+        {
+            if (content == "UE4")
             {
                 state.StateObjType = StateObjectType.UE4;
                 NewConectionCreated(ref state);
                 Console.WriteLine("---- Making a UE4");
-
             }
             else if (content == "MAYA")
             {
@@ -273,18 +279,16 @@ namespace Viewer_Server
                 NewConectionCreated(ref state);
                 Console.WriteLine("---- Making a Maya client");
             }
+            else if (content == "STOP")
+            {
+                state.Deactivate();
+            }
             else
             {
-                if (state.ParentClientObject != null)
-                {
-                    state.ParentClientObject.HandleCommand(content);
-                }
-                else
-                {
-                    Console.WriteLine("NULL PARENT OBJECT: state.ParentClientObject.HandleCommand(content);");
-                }
+                Console.WriteLine("NULL PARENT OBJECT: state.ParentClientObject.HandleCommand(content);");
             }
         }
+
 
         bool SendResponceHeader(Socket handler, ResponceHeaders ResponceType, int ResponceSize)
         {
@@ -295,7 +299,6 @@ namespace Viewer_Server
             {
                 handler.BeginSend(RType, 0, 4, 0, new AsyncCallback(SendCallback), handler);
                 handler.BeginSend(ResponceSize_ba, 0, 4, 0, new AsyncCallback(SendCallback), handler);
-                //Console.WriteLine("--------SendResponceHeader -----------");
                 return true;
             }
             catch
@@ -308,18 +311,13 @@ namespace Viewer_Server
 
         private bool SendTextMessage(Socket handler, String data, ResponceHeaders ResponceType)
         {
-            // Convert the string data to byte data using ASCII encoding.
-
             byte[] byteData = Encoding.ASCII.GetBytes(data);
-             if (!SendResponceHeader(handler, ResponceType, byteData.Length)) return false;
-
-            // Begin sending the data to the remote device.
+            if (!SendResponceHeader(handler, ResponceType, byteData.Length)) return false;
 
             try
             {
                 handler.BeginSend(byteData, 0, byteData.Length, 0,
                 new AsyncCallback(SendCallback), handler);
-               // Console.WriteLine("sending " + data);
                 return true;
             }
             catch
@@ -336,10 +334,8 @@ namespace Viewer_Server
             {
                 // Retrieve the socket from the state object.
                 Socket handler = (Socket)ar.AsyncState;
-
                 // Complete sending the data to the remote device.
                 int bytesSent = handler.EndSend(ar);
-                //Console.WriteLine("Sent {0} bytes to client.", bytesSent);
             }
             catch (Exception e)
             {

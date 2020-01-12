@@ -33,9 +33,8 @@ public:
 	};
 
 	enum class ResponceHeaders {
-		SetType = 0,
+		ServerCommand = 0,
 		Command = 1,
-		Action = 2,
 	};
 
 
@@ -97,11 +96,16 @@ private:
 	int m_PackageResponceSize;
 	FVector m_ActiveCameraPosition;
 
+	//Debug Info
 	float m_downloadAmount = 0;
 	float m_uploadAmount = 0;
+	float m_actionsSent = 0;
+	float m_actionsProcessed = 0;
 	float m_downloadAmountTime = 0;
 
 
 	void ProcessCommand(TSharedPtr<FJsonObject> JsonObject);
 	void LoadObjects();
+
+	void CloseConnection(bool CloseBecauseofError);
 };

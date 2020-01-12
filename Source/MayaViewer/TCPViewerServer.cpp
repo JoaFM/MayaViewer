@@ -98,6 +98,7 @@ void ALiteratiumServer::DissconectToServer()
 		UE_LOG(LogTemp, Error, TEXT("TCPVIEW: %s"),  TEXT("No connection to close"));
 		return;
 	}
+	SendTextMessage("STOP", ResponceHeaders::ServerCommand);
 	bool successful = SocketToServer->Close();
 	UE_LOG(LogTemp, Warning, TEXT("TCPVIEW: %s"), (successful ? TEXT("Closed Connection":TEXT("Failed to close"))));
 	if (successful)
@@ -118,9 +119,9 @@ void ALiteratiumServer::SendTextMessage(FString TextToSend, ResponceHeaders Resp
 		UE_LOG(LogTemp, Error, TEXT("No text"));
 		return;
 	}
+	m_actionsSent++;
 
-
-	FString serialized = TextToSend + FString("\n");
+	FString serialized = TextToSend;
 	TCHAR *serializedChar = serialized.GetCharArray().GetData();
 	int32 size = FCString::Strlen(serializedChar);
 	int32 sent = 0;
@@ -129,6 +130,7 @@ void ALiteratiumServer::SendTextMessage(FString TextToSend, ResponceHeaders Resp
 	SendResponceHeader(ResponceType, size);
 	bool successful = SocketToServer->Send((uint8*)TCHAR_TO_UTF8(serializedChar), size, sent);
 	UE_LOG(LogTemp, Log, TEXT("%s Sent %s"), (successful ? TEXT(">>>"):TEXT("ERROR!! : ")), serializedChar);
+	if (!successful)CloseConnection(true);
 	
 }
 
@@ -190,6 +192,12 @@ void ALiteratiumServer::Tick(float DeltaSeconds)
 	RecvSocketData(SocketToServer, 1024, MSG);
 	ProcessDataStream();
 
+	if (!SocketToServer)
+	{
+		GEngine->AddOnScreenDebugMessage(5, 1.f, FColor::Purple, TEXT("Not Connected To Server"));
+		return;
+	}
+
 	if (IsValid(m_CommandList) && m_SceneUpdateTimer > m_SceneUpdateTimerMax)
 	{
 		m_SceneUpdateTimer = 0;
@@ -203,17 +211,24 @@ void ALiteratiumServer::Tick(float DeltaSeconds)
 	m_downloadAmountTime += DeltaSeconds;
 	if (m_downloadAmountTime > 1.0f)
 	{
-		GEngine->AddOnScreenDebugMessage(5, 1.f, FColor::Green, FString::Printf(TEXT("down \t %s kbs"),* FString::SanitizeFloat(m_downloadAmount / 1024.0f)));
-		GEngine->AddOnScreenDebugMessage(6, 1.f, FColor::Red, FString::Printf(TEXT("Up   \t %s kbs"), *FString::SanitizeFloat(m_uploadAmount / 1024.0f)));
+		GEngine->AddOnScreenDebugMessage(5, 1.f, FColor::Green, FString::Printf(TEXT("down ................ %s kbs"),* FString::SanitizeFloat(m_downloadAmount / 1024.0f)));
+		GEngine->AddOnScreenDebugMessage(6, 1.f, FColor::Red,	FString::Printf(TEXT("Up .................. %s kbs"), *FString::SanitizeFloat(m_uploadAmount / 1024.0f)));
+		m_downloadAmount = m_uploadAmount = 0;
 
-		m_downloadAmountTime = 0;
-		m_downloadAmount = m_uploadAmount= 0;
+		GEngine->AddOnScreenDebugMessage(8, 1.f, FColor::Red,	FString::Printf(TEXT("Messages sent ...... %d "), (int32)(m_actionsSent )));
+		GEngine->AddOnScreenDebugMessage(9, 1.f, FColor::Red,	FString::Printf(TEXT("Commands Processed . %d "), (int32)(m_actionsProcessed)));
+
+		 m_actionsSent = m_actionsProcessed = 0;
+
+
+		 m_downloadAmountTime = 0;
 	}
 }
 
 void ALiteratiumServer::ProcessDataStream()
 {
 
+	
 	bool dataProcessed = true;
 	if (!m_CurrentDataStream.Num()) return;
 
@@ -223,6 +238,7 @@ void ALiteratiumServer::ProcessDataStream()
 
 		if (m_currentState == CurrentState::WatingForResponceHeader)
 		{
+			m_actionsProcessed++;
 			if (m_CurrentDataStream.Num() < m_ResponceHeaderSize) return;
 			int HeaderTypeI = -1;
 			m_PackageResponceSize = -1;
@@ -238,29 +254,21 @@ void ALiteratiumServer::ProcessDataStream()
 		}
 		else if (m_currentState == CurrentState::WaitingForPackage)
 		{
+			m_actionsProcessed++;
 			if (m_CurrentDataStream.Num() < m_PackageResponceSize) return;
 			TArray<char> Command = RemoveRangeOnDataStream(m_PackageResponceSize);
 			dataProcessed = true;
 
 			Command.Add(0);
 			FString CommandString = FString(Command.GetData());
+
 			TSharedPtr<FJsonObject> CommandJson = MakeShareable(new FJsonObject());
 			TSharedRef<TJsonReader<>> JsonReader = TJsonReaderFactory<>::Create(CommandString);
 			if (!FJsonSerializer::Deserialize(JsonReader, CommandJson) && CommandJson.IsValid())
 			{
 				// LOG failed to deserilse command json
 			}
-
-			if (m_PackageResponceType == ResponceHeaders::Command)
-			{
-				if (CommandJson->GetStringField("Command") == "WhatTypeAreYou")
-				{
-					m_currentState = CurrentState::WatingForResponceHeader;
-					SendTextMessage("UE4",ResponceHeaders::SetType);
-				}
-
-			}
-			else if (m_PackageResponceType == ResponceHeaders::Action)
+			else if (m_PackageResponceType == ResponceHeaders::Command)
 			{
 
 				m_currentState = CurrentState::WatingForResponceHeader;
@@ -271,9 +279,7 @@ void ALiteratiumServer::ProcessDataStream()
 				}
 			}
 		}
-
 	}
-	
 }
 
 TArray<char> ALiteratiumServer::RemoveRangeOnDataStream(int Size)
@@ -307,4 +313,12 @@ void ALiteratiumServer::LoadObjects()
 	m_CommandList->Setup(m_viewerScene, this);
 	m_viewerScene->Setup(m_CommandList, GetWorld());
 
+}
+
+
+
+void ALiteratiumServer::CloseConnection(bool CloseBecauseofError)
+{
+	SocketToServer->Close();
+	SocketToServer = nullptr;
 }

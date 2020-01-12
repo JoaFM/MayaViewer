@@ -61,6 +61,9 @@ public:
 
 	UPROPERTY()
 		TArray<float> WorldMatrix;
+
+	UPROPERTY()
+		FVector scale;
 };
 
 

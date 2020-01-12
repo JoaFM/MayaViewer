@@ -26,22 +26,29 @@ void ALiterarumMesh::OnConnect()
 void ALiterarumMesh::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	DrawDebugBox(
-		GetWorld(),
-		m_MeshBounds.GetCenter(),
-		m_MeshBounds.GetExtent(),
-		FQuat::Identity,
-		FColor(0, 0, 255), false, 1.0f
-	);
+	if (m_IsMeshDirty != EDirtState::Clean ||
+		m_IsTransformDirty !=EDirtState::Clean
+		)
+	{
+		DrawDebugBox(
+			GetWorld(),
+			m_MeshBounds.GetCenter(),
+			m_MeshBounds.GetExtent(),
+			FQuat::Identity,
+			FColor(0, 0, 255), false, 1.0f
+		);
+	}
 
 	if (m_IsMeshDirty == EDirtState::Dirty)
 	{
+		m_SceneManager->RequestObjectMeta(GetObjectName());
 		m_SceneManager->RequestObjectWholeData(GetObjectName());
 		m_IsMeshDirty = EDirtState::PendingUpdate;
 	}
 
 	if (m_IsTransformDirty == EDirtState::Dirty)
 	{
+		m_SceneManager->RequestObjectMeta(GetObjectName());
 		m_SceneManager->RequestObjectTransform(GetObjectName());
 		m_IsTransformDirty = EDirtState::PendingUpdate;
 	}

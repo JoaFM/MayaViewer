@@ -12,11 +12,17 @@ class CurrentState:
     WaitingForPackage = 2
 
 class ResponceHeaders:
-    SetType = 0
+    ServerCommand = 0
     Command = 1
-    Action = 2
 
 class LiteratimClient():
+
+    def __init__(self):
+        self.ReadyToKill = False
+
+    def __del__(self):
+        self.Stop()
+
     OnCommandFunction = None
     isStarted = False
     serverisReady = False
@@ -39,16 +45,24 @@ class LiteratimClient():
         self.outputs = []
         self.isStarted = True
         self.serverisReady = False
+        self.ReadyToKill = False
         
         self.m_StateObjectListenState = CurrentState.WatingForResponceHeader
-        self.m_nextPackageType = ResponceHeaders.SetType
+        self.m_nextPackageType = ResponceHeaders.ServerCommand
         self.m_nextPackageSize = -1 
         self.m_IncommingData = b""
         
     def Stop(self):
+        "__________________STOPPING SERVER_____________________"
+        self.SendMessage("STOP",ResponceHeaders.ServerCommand)
+        if (self.server != None):
+            self.server.close()
+
         self.server = None
         self.isStarted = False
         self.serverisReady = False
+        self.ReadyToKill = True
+
 
 
     def Tick(self):
@@ -85,7 +99,6 @@ class LiteratimClient():
                     
             if self.m_StateObjectListenState == CurrentState.WaitingForPackage:
                 if len(self.m_IncommingData) >= self.m_nextPackageSize:
-                    
                     Command = self.m_IncommingData[:self.m_nextPackageSize]
                     try:
                         CommandDict = json.loads(Command)
@@ -96,11 +109,9 @@ class LiteratimClient():
 
                     if  CommandDict["Command"] == "WhatTypeAreYou":
                         print ("Responding to WhatTypeAreYou")
-                        self.SendMessage("MAYA", ResponceHeaders.SetType)
+                        self.SendMessage("MAYA", ResponceHeaders.ServerCommand)
                         self.serverisReady = True
                     elif (self.OnCommandFunction != None):
-                        print "----------------------------------"
-                        print Command
                         self.OnCommandFunction(CommandDict)
                         
                         
@@ -111,14 +122,9 @@ class LiteratimClient():
             
     
     def SendMessage(self, _Message, ResponceHeaders_type):
-        
-        if ((ResponceHeaders_type != ResponceHeaders.SetType) and (not self.serverisReady )):
-
+        if ((ResponceHeaders_type != ResponceHeaders.ServerCommand) and (not self.serverisReady )):
             print "Server state not ready"    
             return 
-        
-        # print ("SendMessage::" + _Message,ResponceHeaders_type)
-        
         values = (ResponceHeaders_type, len(_Message))
         packer = struct.Struct('I I')
         packed_data = packer.pack(*values)
@@ -127,7 +133,8 @@ class LiteratimClient():
             self.server.sendall(_Message)
         except socket.error, exc:
             print "Caught exception socket.error : %s" % exc
-            self.Stop()
+            if (_Message != "STOP"):
+                self.Stop()
 
 
         

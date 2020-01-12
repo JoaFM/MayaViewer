@@ -142,7 +142,7 @@ void ULiteratumSceneManager::UpdateSceneObjectTransfrom(TSharedPtr<FJsonObject> 
 	FTransform NewTransform;
 
 	NewTransform.SetLocation(Location);
-
+	NewTransform.SetScale3D(NewObjectTransformDes.scale);
 
 	if (m_SceneActors.Contains(NewObjectTransformDes.objectName))
 	{
@@ -197,7 +197,7 @@ UMaterial* ULiteratumSceneManager::GetMaterialFromContent(FString materialName)
 void ULiteratumSceneManager::UpdateSceneMaterialLibrary()
 {
 	TArray<FString> Filenames;
-	FPackageName::FindPackagesInDirectory(Filenames, FPaths::GameContentDir());
+	FPackageName::FindPackagesInDirectory(Filenames, FPaths::ProjectContentDir());
 
 	TArray<FString> assetReferences;
 	for (TArray<FString>::TConstIterator FileItem(Filenames); FileItem; ++FileItem)

@@ -4,11 +4,37 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        xmlns:local="clr-namespace:Viewer_Server"
+        Title="MainWindow" Height="450" Width="800" >
+    
     <Grid >
-        <Button x:Name="bt_Connect" Content="CONNECT" HorizontalAlignment="Left" Margin="226,129,0,0" VerticalAlignment="Top" Width="297" Height="143" Click="Button1_Click" FontSize="48"/>
-        <TextBlock x:Name="tb_numCleint" HorizontalAlignment="Left" Margin="55,10,0,0" TextWrapping="Wrap" Text="{Binding Path=NumberOfClients2}" VerticalAlignment="Top"/>
-        <Button x:Name="bt_refresh" Content="Button" HorizontalAlignment="Left" Margin="177,39,0,0" VerticalAlignment="Top" Width="75" Click="Bt_refresh_Click"/>
-
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="14*"/>
+            <ColumnDefinition Width="240*"/>
+            <ColumnDefinition Width="127*"/>
+            <ColumnDefinition Width="30"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="17*"/>
+            <RowDefinition Height="104*"/>
+            <RowDefinition Height="21*"/>
+            <RowDefinition Height="257*"/>
+            <RowDefinition Height="20*"/>
+        </Grid.RowDefinitions>
+        
+        <Button x:Name="bt_Connect" Content="Start Server" Click="Button1_Click" FontSize="48" Grid.Column="2" Grid.Row="1"/>
+        <TextBlock x:Name="tb_Test"  TextWrapping="Wrap" Text="{Binding Path=m_ClientMan.Clients.Count}"  Grid.Row="2" Grid.Column="1"/>
+        <ListView Grid.Row="3" Grid.ColumnSpan="2" Grid.Column="1" ItemsSource="{Binding m_ClientMan.Clients}" HorizontalContentAlignment="Stretch">
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Background="Aqua" Orientation="Horizontal">
+                        <TextBlock Text="Client    : " />
+                        <TextBlock Text="{Binding Name}"/>
+                        <TextBlock Text="    " />
+                        <TextBlock Text="{Binding ClientType}" HorizontalAlignment="Right"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
     </Grid>
 </Window>
