@@ -106,6 +106,7 @@ public:
 private:
 	friend class UCommandList;
 	void SetCamera(FNetCameraInfo NewCamerainfo) { m_CameraInfo = NewCamerainfo; }
+	ALiteratumActorBase* GetSceneActor(FString ActorName);
 
 
 	UPROPERTY()
@@ -127,4 +128,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		TMap<FString, UMaterialInstance*> m_sceneMaterialInstances;
 
+public:
+	void SetMeshBucketVerts(TSharedPtr<FJsonObject> MeshVertBucketsJson);
+	void SetMeshBucketTris(TSharedPtr<FJsonObject> MeshVertBucketsJson);
 };

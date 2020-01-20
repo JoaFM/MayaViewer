@@ -9,16 +9,16 @@ reload(MayaTools)
 import LiteratimClient
 reload(LiteratimClient)
 
-import SceneManager 
-reload(SceneManager)
+import LiteratimSceneManager 
+reload(LiteratimSceneManager)
 
 class RVViewManager():
     def __init__(self):
         self.ShouldTick = True
         self.tick_thread = None
-        self.scene = SceneManager.SceneManager()
+        self.scene = LiteratimSceneManager.SceneManager()
         self.tickRate = 1
-    
+        self.lastCameraHash = -1
     
     def Start(self,*arg):
         print(arg)
@@ -56,29 +56,34 @@ class RVViewManager():
                 print "Server Down"
                 self.Stop()  
                 return 
+            self.scene.Tick()
             self.UpdateCamera()
+            self.send_command_list()
             self._literatimMayaClient.Tick()
-        
+            
     def OnCommand(self, Command):
-        if (Command["Command"] == "GetSceneDescription"):
-            self._literatimMayaClient.SendMessage(self.scene.getSceneDescriptionJsonCommand(), LiteratimClient.ResponceHeaders.Command)
-        elif  (Command["Command"]  == "GetObjectTransform"):
-            print ("Responding to GetObjectTransform")
-            self._literatimMayaClient.SendMessage(self.scene.getObjectTransformCommand(Command["ObjectName"]),LiteratimClient.ResponceHeaders.Command)
-        elif  (Command["Command"] == "GetSceneDescription"):
-            print ("Responding to GetSceneDescription")
-            self._literatimMayaClient.SendMessage(self.scene.getSceneDescriptionJsonCommand(), LiteratimClient.ResponceHeaders.Command)
-        elif  (Command["Command"] == "GetObjectMeta"):
-            print ("Responding to GetObjectMeta")
-            self._literatimMayaClient.SendMessage(self.scene.getObjectMeshMeta(Command["ObjectName"]), LiteratimClient.ResponceHeaders.Command)
-        elif  (Command["Command"] == "GetObjectWholeData"):
-            print ("Responding to GetObjectWholeData")
-            self._literatimMayaClient.SendMessage(self.scene.GetObjectWholeData(Command["ObjectName"]), LiteratimClient.ResponceHeaders.Command)             
-        else:
-            print "There was a engored command " + str(Command)
-        
+        #if (Command["Command"] == "GetSceneCommand"):
+
+        #else:
+        print "There was a engored command " + str(Command)
+
+    def send_command_list(self):
+        SceneCommands = self.scene.get_command_list()
+        for Command in SceneCommands:
+            if not self._literatimMayaClient.SendMessage(Command, LiteratimClient.ResponceHeaders.Command):
+                return 
+
+        self.scene.clear_command_list()
+
+
     def UpdateCamera(self):
         Command = MayaTools.GetCameraPosCommand()
-        self._literatimMayaClient.SendMessage(Command,LiteratimClient.ResponceHeaders.Command)
+        commandhash = hash(Command) #  
+        if (self.lastCameraHash == commandhash):
+            return
+        
+        if self._literatimMayaClient.SendMessage(Command,LiteratimClient.ResponceHeaders.Command):
+            self.lastCameraHash = commandhash
+
     
 server = RVViewManager()

@@ -57,7 +57,7 @@ namespace Viewer_Server
         {
             m_ClientMan = new ClientManager();
             m_ClientMan.StartServer();
-            bt_Connect.Content = "Server Started";
+            bt_Connect.Content = "STARTED";
         }
 
         private void Bt_refresh_Click(object sender, RoutedEventArgs e)

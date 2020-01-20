@@ -44,7 +44,9 @@ private:
 	void SetSceneDescription(TSharedPtr<FJsonObject> InputString);
 	void SetObjectTransform(TSharedPtr<FJsonObject> InputString);
 	void WhatTypeAreYou(TSharedPtr<FJsonObject> InputString);
-
+	void SetMeshBucketVerts(TSharedPtr<FJsonObject> MeshVertBucketsJson);
+	void SetMeshBucketTris(TSharedPtr<FJsonObject> MeshTriBucketsJson);
+	
 private:
 
 	TMap<FString, CommandFunctionPtrType> Actions;

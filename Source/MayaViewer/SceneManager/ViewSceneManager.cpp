@@ -223,3 +223,44 @@ void ULiteratumSceneManager::UpdateSceneMaterialLibrary()
 		}
 	}
 }
+
+
+
+ALiteratumActorBase*  ULiteratumSceneManager::GetSceneActor(FString ActorName)
+{
+	if (m_SceneActors.Contains(ActorName))
+	{
+		return m_SceneActors[ActorName];
+	}
+	else
+	{
+		ALiteratumActorBase* NewObj = m_ParentWorld->SpawnActor<ALiterarumMesh>(ALiterarumMesh::StaticClass(), FTransform::Identity);
+		NewObj->Setup(ActorName, this);
+		NewObj->OnConnect();
+		m_SceneActors.Add(ActorName, NewObj);
+		UE_LOG(LogTemp, Warning, TEXT("Created Object: %s"), *ActorName);
+		return NewObj;
+	}
+}
+
+
+void ULiteratumSceneManager::SetMeshBucketVerts(TSharedPtr<FJsonObject> MeshVertBucketsJson)
+{
+	FString objname = MeshVertBucketsJson->GetStringField("objectName");
+	ALiteratumActorBase* SceneActor = GetSceneActor(objname);
+		
+	if (IsValid(SceneActor))
+	{
+		SceneActor->SetMeshVertBucket(MeshVertBucketsJson);
+	}
+}
+
+void ULiteratumSceneManager::SetMeshBucketTris(TSharedPtr<FJsonObject> MeshVertBucketsJson)
+{
+	FString objname = MeshVertBucketsJson->GetStringField("objectName");
+	ALiteratumActorBase* SceneActor = GetSceneActor(objname);
+	if (IsValid(SceneActor))
+	{
+		SceneActor->SetMeshTriBucket(MeshVertBucketsJson);
+	}
+}

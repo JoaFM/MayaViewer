@@ -1,4 +1,3 @@
-import socket
 import sys
 import select
 import socket
@@ -123,18 +122,22 @@ class LiteratimClient():
     
     def SendMessage(self, _Message, ResponceHeaders_type):
         if ((ResponceHeaders_type != ResponceHeaders.ServerCommand) and (not self.serverisReady )):
-            print "Server state not ready"    
-            return 
+            print "Server state not ready, failed:",_Message
+            return False
         values = (ResponceHeaders_type, len(_Message))
         packer = struct.Struct('I I')
         packed_data = packer.pack(*values)
         try :
             self.server.sendall(packed_data)
             self.server.sendall(_Message)
+            print "Sucsess",_Message
+            return True
         except socket.error, exc:
             print "Caught exception socket.error : %s" % exc
             if (_Message != "STOP"):
                 self.Stop()
+        
+        return False
 
 
         

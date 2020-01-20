@@ -3,50 +3,111 @@ import maya.OpenMaya as om
 import json
 import MayaTools
 
+import LiteratimMeshManager
+reload(LiteratimMeshManager)
+
 class SceneManager():
     def __init__(self):
-        self._scene_description = {}
-        self.UpdateList = []
-        self._mesh_data = {}
-        self._transformData = {}
+        # a orderd list of all the scene names
+        self._sceneMeshes = []
 
+        # A dictonary with all the sece mesh data
+        self._scene = {}
+        
+        
+        # Each tick check if a mash is dirty
+        # This holds the last dirty mesh to check if it has become clean
+        # if clean the number will be incremented
+        self._sceneMeshesUpdateIndex = 0
+        
+        #On each tick check a certain amount of transforms
+        #This holds the last checked position
+        self._transformUpdateIndex = 0
+
+        # A list of transforms to send on next request
+        self._transformUpdateData = {}        
+
+        self._out_commands = []
 
     def UpdateSceneDescription(self):
-        scene_transform_nodes = cmds.ls(g=1,noIntermediate=True)
-        OldList = self._scene_description.copy()
-        self._scene_description.clear()
-        for sceneObj in scene_transform_nodes:
+        scene_Shape_nodes = cmds.ls(g=1,noIntermediate=True)
+        OldList = self._scene.copy()
+
+        self._scene.clear()
+
+        has_scene_changed = False
+        #check new 
+        for sceneObj in scene_Shape_nodes:
             if (sceneObj in OldList):
-                self._scene_description[sceneObj] = OldList[sceneObj]    
+                self._scene[sceneObj] = OldList[sceneObj]    
             else:
-                self._scene_description[sceneObj] = {"c":"g", "h":"", "t":""} # C for camera
-        self.TickMeshUpdate()
+                self._scene[sceneObj] = {"Mesh" : LiteratimMeshManager.MeshManager(sceneObj), "MH" : True, "TH":True   } #meshManager, mesh has , tansform hash
+                has_scene_changed = True
+                self.signel_new_Object(sceneObj)
+
+        for old_scene_obj in OldList:
+            if old_scene_obj not in self._scene:
+                self.signel_del_Object(old_scene_obj)
 
 
-    def TickMeshUpdate(self):
-        """
-        Essentialy take One mesh every tick and see if it is up to date
-        IE make a hash and store it in hte scene description
-        """
+        if has_scene_changed:
+            print ">>> Scene Changed interal"
+            self._sceneMeshes = []
+            self._sceneMeshesUpdateIndex = 0
+            for sceneObjkey in self._scene:
+                self._sceneMeshes.append(sceneObjkey)
 
-        #Loop the list
-        if ( len(self.UpdateList) == 0):
-            self.UpdateList =  self._scene_description.keys()
-        
-        #take one object
-        if (len(self.UpdateList) == 0):
+
+    def signel_new_Object(self, sceneObj):
+        data = {}
+        data["Command"] = "SpawnNewObject"
+        data["objectName"] = sceneObj
+        json_data = json.dumps(data)
+        self._out_commands.append(json_data)
+
+    def signel_del_Object(self, sceneObj):
+        data = {}
+        data["Command"] = "SpawnNewObject"
+        data["objectName"] = sceneObj
+        json_data = json.dumps(data)
+        self._out_commands.append(json_data)
+
+
+    def clear_command_list(self):
+        print "Clear commands"
+        self._out_commands *= 0
+
+    def get_command_list (self):
+        print "Get Commands",self._out_commands
+        return self._out_commands
+
+    def Tick(self):
+        self.UpdateSceneDescription()
+
+        ## check for empty scene
+        if len(self._sceneMeshes) == 0:
             return
-        nextMeshToUpdate = self.UpdateList.pop()
-        self._mesh_data[nextMeshToUpdate] = self.GetObjectWholeData(nextMeshToUpdate)
-        self._transformData[nextMeshToUpdate] = self.getObjectTransformCommand(nextMeshToUpdate)
-        self._scene_description[nextMeshToUpdate] = self.UpdateHash(
-                                                        self._scene_description[nextMeshToUpdate],
-                                                        None,
-                                                        self.HashStr(self._mesh_data[nextMeshToUpdate]),
-                                                        self.HashStr(self._transformData[nextMeshToUpdate])
-                                                    )
 
+        mesh_key = self._sceneMeshes[self._sceneMeshesUpdateIndex]
 
+        self._scene[mesh_key]["Mesh"].Tick()
+        ## increment and loop the mesh index
+        
+        
+        BucketCommand = self._scene[mesh_key]["Mesh"].GetNextDirtyTriBucketCommand()
+        TriCommand =  self._scene[mesh_key]["Mesh"].GetNextDirtyVertBucketCommand()
+
+        if ((BucketCommand is None) and (TriCommand is None) ):
+            self._sceneMeshesUpdateIndex = (self._sceneMeshesUpdateIndex + 1) % len(self._sceneMeshes)
+
+        if BucketCommand is not None :
+            self._out_commands.append(BucketCommand)
+        if TriCommand is not None :
+            self._out_commands.append(TriCommand)
+             
+        
+
+        
     def HashStr(self, _str):
         return str(abs(hash(_str)) % (10 ** 8) )
 

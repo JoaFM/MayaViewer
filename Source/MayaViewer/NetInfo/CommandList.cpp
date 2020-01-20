@@ -17,6 +17,10 @@ void UCommandList::UpdateActions()
 		Actions.Add("SetObjectMeta", &UCommandList::SetObjectMeta);
 		Actions.Add("SetObjectWholeData", &UCommandList::SetObjectWholeData);
 		Actions.Add("WhatTypeAreYou", &UCommandList::WhatTypeAreYou);
+		Actions.Add("SetMeshBucketVerts", &UCommandList::SetMeshBucketVerts);
+		Actions.Add("SetMeshBucketTris", &UCommandList::SetMeshBucketTris);
+
+		
 	}
 }
 
@@ -121,6 +125,15 @@ void UCommandList::WhatTypeAreYou(TSharedPtr<FJsonObject> InputString)
 
 }
 
+void UCommandList::SetMeshBucketVerts(TSharedPtr<FJsonObject> MeshVertBucketsJson)
+{
+	m_ViewerScene->SetMeshBucketVerts(MeshVertBucketsJson);
+}
+
+void UCommandList::SetMeshBucketTris(TSharedPtr<FJsonObject> MeshTriBucketsJson)
+{
+	m_ViewerScene->SetMeshBucketTris(MeshTriBucketsJson);
+}
 
 
 // --------------------  Out going Commands 
