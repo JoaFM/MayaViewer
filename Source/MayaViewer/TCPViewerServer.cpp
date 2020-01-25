@@ -201,7 +201,7 @@ void ALiteratiumServer::Tick(float DeltaSeconds)
 	if (IsValid(m_CommandList) && m_SceneUpdateTimer > m_SceneUpdateTimerMax)
 	{
 		m_SceneUpdateTimer = 0;
-		m_CommandList->QuerySceneDecription();
+		//m_CommandList->QuerySceneDecription();
 	}
 	else
 	{

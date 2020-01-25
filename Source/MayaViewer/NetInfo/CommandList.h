@@ -46,6 +46,7 @@ private:
 	void WhatTypeAreYou(TSharedPtr<FJsonObject> InputString);
 	void SetMeshBucketVerts(TSharedPtr<FJsonObject> MeshVertBucketsJson);
 	void SetMeshBucketTris(TSharedPtr<FJsonObject> MeshTriBucketsJson);
+	void SetMeshDone(TSharedPtr<FJsonObject> commandJsonO);
 	
 private:
 

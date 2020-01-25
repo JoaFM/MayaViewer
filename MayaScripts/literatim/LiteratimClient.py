@@ -124,6 +124,7 @@ class LiteratimClient():
         if ((ResponceHeaders_type != ResponceHeaders.ServerCommand) and (not self.serverisReady )):
             print "Server state not ready, failed:",_Message
             return False
+
         values = (ResponceHeaders_type, len(_Message))
         packer = struct.Struct('I I')
         packed_data = packer.pack(*values)

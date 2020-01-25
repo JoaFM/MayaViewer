@@ -1,0 +1,71 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{ddf9333d-f3fb-40eb-bfcd-fc05a2c1dae9}</UniqueIdentifier>
+      <Extensions>cpp</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{0dc7fb86-26b0-4158-9515-fbf200fa3022}</UniqueIdentifier>
+      <Extensions>h</Extensions>
+    </Filter>
+    <Filter Include="Miscellaneous Files">
+      <UniqueIdentifier>{6f54dfeb-bc23-41c2-99de-0c3058a73251}</UniqueIdentifier>
+      <Extensions>txt</Extensions>
+    </Filter>
+    <Filter Include="Source Files\LiteratimTool">
+      <UniqueIdentifier>{c2d7c312-2ff1-4277-80fc-1cbf999d5282}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="External">
+      <UniqueIdentifier>{195a3d49-4b9a-4397-b753-e0d0b8434559}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="ReadMe.txt">
+      <Filter>Miscellaneous Files</Filter>
+    </Text>
+    <Text Include="Options.txt">
+      <Filter>Miscellaneous Files</Filter>
+    </Text>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="LiteratimTool\LiteratimMain.cpp">
+      <Filter>Source Files\LiteratimTool</Filter>
+    </ClCompile>
+    <ClCompile Include="LiteratimTool\LiteratimSceneManager.cpp">
+      <Filter>Source Files\LiteratimTool</Filter>
+    </ClCompile>
+    <ClCompile Include="LiteratumMayaCmd.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LiteratimTool\LiteratimMesh.cpp">
+      <Filter>Source Files\LiteratimTool</Filter>
+    </ClCompile>
+    <ClCompile Include="LiteratimTool\LiteratimNetworking.cpp">
+      <Filter>Source Files\LiteratimTool</Filter>
+    </ClCompile>
+    <ClCompile Include="BufferStack.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="LiteratimTool\LiteratimMain.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LiteratimTool\LiteratimSceneManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LiteratimTool\LiteratimMesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LiteratimTool\LiteratimNetworking.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BufferStack.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="External\json.hpp">
+      <Filter>External</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

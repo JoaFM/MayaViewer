@@ -29,6 +29,8 @@ class SceneManager():
 
         self._out_commands = []
 
+        self._meshStarted= False
+
     def UpdateSceneDescription(self):
         scene_Shape_nodes = cmds.ls(g=1,noIntermediate=True)
         OldList = self._scene.copy()
@@ -94,19 +96,31 @@ class SceneManager():
         ## increment and loop the mesh index
         
         
-        BucketCommand = self._scene[mesh_key]["Mesh"].GetNextDirtyTriBucketCommand()
+        BucketCommands = self._scene[mesh_key]["Mesh"].GetNextDirtyTriBucketCommand()
         TriCommand =  self._scene[mesh_key]["Mesh"].GetNextDirtyVertBucketCommand()
 
-        if ((BucketCommand is None) and (TriCommand is None) ):
+        if ((BucketCommands is None) and (TriCommand is None) ):
+            if self._meshStarted:
+                self._meshStarted = False
+                self.sendMeshDone(self._sceneMeshes[self._sceneMeshesUpdateIndex])
             self._sceneMeshesUpdateIndex = (self._sceneMeshesUpdateIndex + 1) % len(self._sceneMeshes)
+            
 
-        if BucketCommand is not None :
-            self._out_commands.append(BucketCommand)
+        if BucketCommands is not None :
+            self._meshStarted = True
+            for buckCommand in BucketCommands:
+                self._out_commands.append(buckCommand)
         if TriCommand is not None :
+            self._meshStarted = True
             self._out_commands.append(TriCommand)
              
         
-
+    def sendMeshDone(self, meshName):
+        data = {}
+        data["Command"] = "MeshDone"
+        data["objectName"] = meshName
+        json_data = json.dumps(data)
+        self._out_commands.append(json_data)
         
     def HashStr(self, _str):
         return str(abs(hash(_str)) % (10 ** 8) )

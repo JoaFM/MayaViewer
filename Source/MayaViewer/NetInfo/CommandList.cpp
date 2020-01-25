@@ -19,6 +19,9 @@ void UCommandList::UpdateActions()
 		Actions.Add("WhatTypeAreYou", &UCommandList::WhatTypeAreYou);
 		Actions.Add("SetMeshBucketVerts", &UCommandList::SetMeshBucketVerts);
 		Actions.Add("SetMeshBucketTris", &UCommandList::SetMeshBucketTris);
+		Actions.Add("MeshDone", &UCommandList::SetMeshDone);
+
+		
 
 		
 	}
@@ -135,6 +138,11 @@ void UCommandList::SetMeshBucketTris(TSharedPtr<FJsonObject> MeshTriBucketsJson)
 	m_ViewerScene->SetMeshBucketTris(MeshTriBucketsJson);
 }
 
+
+void UCommandList::SetMeshDone(TSharedPtr<FJsonObject> commandJsonO)
+{
+	m_ViewerScene->SetMeshDone(commandJsonO->GetStringField("objectName"));
+}
 
 // --------------------  Out going Commands 
 void UCommandList::QuerySceneDecription()

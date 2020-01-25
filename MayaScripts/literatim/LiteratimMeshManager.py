@@ -134,17 +134,20 @@ class MeshManager():
             else:
                 materialsTriangles[0].extend(NewTris)
 
-        FinalTriData = []
-        for lst in materialsTriangles:
-            IndexIndex = len(FinalTriData)
-            FinalTriData.append(-1)
-            FinalTriData.extend(lst)
-            FinalTriData[IndexIndex] = IndexIndex
+        #FinalTriData = []
+        #for lst in materialsTriangles:
+        #    IndexIndex = len(FinalTriData)
+        #    #FinalTriData.append(-1)
+        #    FinalTriData.extend(lst)
+            #FinalTriData[IndexIndex] = IndexIndex
 
-        hs = hash(tuple(FinalTriData)) 
+        hs = 0
+        for ls in materialsTriangles:
+            hs += hash(tuple(ls)) 
+
         if (hs != self._triBucket[self._triBucketIndex]["Hash"]):
             self._triBucket[self._triBucketIndex]["Hash"] = hs          
-            self._triBucket[self._triBucketIndex]["Tri"] = FinalTriData          
+            self._triBucket[self._triBucketIndex]["Tri"] = materialsTriangles          
             self._triBucket[self._triBucketIndex]["Dirty"] = True
 
 
@@ -155,28 +158,31 @@ class MeshManager():
         return None
 
     def GetNextDirtyTriBucketCommand(self, cleanBucketOnGet = True):
-        data = {}
-        data["objectName"] = self._obj_name
-        data["Command"] = "SetMeshBucketTris" 
 
+        returnCommands = None
         AnythingDirty = False
         i = self.GetDirtyTriBucket()    
         if (i != None):
             if cleanBucketOnGet:
                 self._triBucket[i]["Dirty"] = False
 
-            data["Tri"] =  self._triBucket[i]["Tri"]
-            data["HashNum"] =  self._triBucket[i]["Hash"]
-            data["Num"] = self._numTri
-            data["BucketIndex"] = i
-            data["NumBuckets"] = len(self._triBucket)
-            data["BucketSize"] = self._triBucketSize
-            AnythingDirty = True
-            print data            
-        if AnythingDirty:
-            return json.dumps(data) 
-        else:
-            return None  
+            for matI in range(len(self._triBucket[i]["Tri"] )):
+                if (returnCommands is None):
+                    returnCommands = []
+
+                matTri = self._triBucket[i]["Tri"][matI]
+                data = {}
+                data["objectName"] = self._obj_name
+                data["Command"] = "SetMeshBucketTris" 
+                data["Tri"] =  matTri
+                data["MatIndex"] = matI
+                data["HashNum"] =  self._triBucket[i]["Hash"]
+                data["Num"] = self._numTri
+                data["BucketIndex"] = i
+                data["NumBuckets"] = len(self._triBucket)
+                data["BucketSize"] = self._triBucketSize
+                returnCommands.append(json.dumps(data))
+        return returnCommands
 
 
     def TickVertUpdate(self):

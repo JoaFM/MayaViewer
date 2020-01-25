@@ -194,6 +194,19 @@ UMaterial* ULiteratumSceneManager::GetMaterialFromContent(FString materialName)
 	return nullptr;
 }
 
+void ULiteratumSceneManager::SetMeshDone(FString UpToDateObjectName)
+{
+	ALiteratumActorBase* SceneActor = GetSceneMeshActor(UpToDateObjectName, false);
+	if (IsValid(SceneActor))
+	{
+		SceneActor->Finish();
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Could not finish object because it does not exist: %s"), *UpToDateObjectName);
+	}
+}
+
 void ULiteratumSceneManager::UpdateSceneMaterialLibrary()
 {
 	TArray<FString> Filenames;
@@ -226,41 +239,65 @@ void ULiteratumSceneManager::UpdateSceneMaterialLibrary()
 
 
 
-ALiteratumActorBase*  ULiteratumSceneManager::GetSceneActor(FString ActorName)
+ALiteratumActorBase*  ULiteratumSceneManager::GetSceneMeshActor(FString ActorName, bool CreateNew)
 {
 	if (m_SceneActors.Contains(ActorName))
 	{
 		return m_SceneActors[ActorName];
 	}
-	else
+	else if (CreateNew)
 	{
 		ALiteratumActorBase* NewObj = m_ParentWorld->SpawnActor<ALiterarumMesh>(ALiterarumMesh::StaticClass(), FTransform::Identity);
 		NewObj->Setup(ActorName, this);
 		NewObj->OnConnect();
 		m_SceneActors.Add(ActorName, NewObj);
-		UE_LOG(LogTemp, Warning, TEXT("Created Object: %s"), *ActorName);
+		UE_LOG(LogTemp, Warning, TEXT("Created Mesh actor Object: %s"), *ActorName);
 		return NewObj;
 	}
+	return nullptr;
 }
 
 
 void ULiteratumSceneManager::SetMeshBucketVerts(TSharedPtr<FJsonObject> MeshVertBucketsJson)
 {
 	FString objname = MeshVertBucketsJson->GetStringField("objectName");
-	ALiteratumActorBase* SceneActor = GetSceneActor(objname);
+	ALiteratumActorBase* SceneActor = GetSceneMeshActor(objname, true);
 		
+
+	if (!IsValid(SceneActor))
+	{
+		UE_LOG(LogTemp, Error, TEXT("Error Creating object %s"), *objname);
+		return;
+	}
+
+	ALiterarumMesh* SceneMeshActor = Cast<ALiterarumMesh>(SceneActor);
 	if (IsValid(SceneActor))
 	{
-		SceneActor->SetMeshVertBucket(MeshVertBucketsJson);
+		SceneMeshActor->SetMeshVertBucket(MeshVertBucketsJson);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Trying to set mesh vertex data on an object that is not a mesh: %s"), *objname);
 	}
 }
 
 void ULiteratumSceneManager::SetMeshBucketTris(TSharedPtr<FJsonObject> MeshVertBucketsJson)
 {
 	FString objname = MeshVertBucketsJson->GetStringField("objectName");
-	ALiteratumActorBase* SceneActor = GetSceneActor(objname);
+	ALiteratumActorBase* SceneActor = GetSceneMeshActor(objname, true);
+	if (!IsValid(SceneActor))
+	{
+		UE_LOG(LogTemp, Error, TEXT("Error Creating object %s"), *objname);
+		return;
+	}
+
+	ALiterarumMesh* SceneMeshActor = Cast<ALiterarumMesh>(SceneActor);
 	if (IsValid(SceneActor))
 	{
-		SceneActor->SetMeshTriBucket(MeshVertBucketsJson);
+		SceneMeshActor->SetMeshTriBucket(MeshVertBucketsJson);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Tring to set mesh triangle data on an object that is not a mesh: %s"), *objname);
 	}
 }

@@ -18,6 +18,12 @@ Viewer_Server/Viewer_Server/bin
 Viewer_Server/Viewer_Server/obj
 MayaScripts/literatim/*.pyc
 *.pyc
+
 MayaScripts/literatim/LiteratimMainManager.pyc
 MayaScripts/literatim/SceneManager.pyc
 MayaScripts/literatim/LiteratimClient.pyc
+
+
+LiteratumMaya/Debug
+LiteratumMaya/LiteratumMaya.VC.db
+LiteratumMaya/LiteratumMaya/Debug

@@ -7,6 +7,7 @@
 #include "DrawDebugHelpers.h"
 #include "SceneManager/ViewSceneManager.h"
 #include "../Plugins/Runtime/ProceduralMeshComponent/Source/ProceduralMeshComponent/Public/ProceduralMeshComponent.h"
+#include "JsonObjectConverter.h"
 
 
 ALiterarumMesh::ALiterarumMesh()
@@ -114,4 +115,157 @@ void ALiterarumMesh::SetWholeMeshData(FWholeMeshData& NewData)
 
 	UE_LOG(LogTemp, Log, TEXT("Updated The mesh"));
 }
+
+void ALiterarumMesh::Finish()
+{
+	ALiteratumActorBase::Finish();
+
+
+	//////////////////////////////////////////////////////////////////////////
+	///                         Materials
+	//////////////////////////////////////////////////////////////////////////
+	//GetNumMaterials
+	int32 matCount = 0;
+	for (const FTriBucket& triB : m_TriBuckets)
+	{
+		matCount = FMath::Max(matCount, triB.MatIndex);
+	}
+	matCount += 1;
+
+
+	//////////////////////////////////////////////////////////////////////////
+	///                           Verts
+	//////////////////////////////////////////////////////////////////////////
+
+	// get vert index length
+	int32 vertCount = 0;
+	TArray<FVector> VertexPositions;
+	{
+		for (const FVertBucket& vertB : m_VertBuckets)
+		{
+			vertCount += vertB.VertexPositions.Num();
+		}
+		// fill vert list
+		VertexPositions.Reserve(vertCount);
+		for (const FVertBucket& vertB : m_VertBuckets)
+		{
+			for (const FVector& P : vertB.VertexPositions)
+			{
+				VertexPositions.Add(FVector(P.X, P.Z, P.Y));
+			}
+		}
+	}
+
+
+	for (int32 MaterialIndex = 0; MaterialIndex < matCount; MaterialIndex++)
+	{
+		//////////////////////////////////////////////////////////////////////////
+		///                           TRI
+		//////////////////////////////////////////////////////////////////////////
+
+		// get tri list length
+		int32 triCount = 0;
+		TArray<int32> Triangles;
+		{
+			for (const FTriBucket& triB : m_TriBuckets)
+			{
+				if (triB.MatIndex == MaterialIndex)
+				{
+					triCount += triB.TriIndexs.Num();
+				}
+			}
+
+			// fill vert list
+			Triangles.Reserve(triCount);
+			for (const FTriBucket& triB : m_TriBuckets)
+			{
+				if (triB.MatIndex == MaterialIndex)
+				{
+					Triangles.Append(triB.TriIndexs);
+				}
+			}
+		}
+		//////////////////////////////////////////////////////////////////////////
+		///                           Construct
+		//////////////////////////////////////////////////////////////////////////
+
+		TArray<FVector> normals;
+		TArray<FVector2D> UV0;
+		TArray<FProcMeshTangent> tangents;
+		TArray<FLinearColor> vertexColors;
+		m_procMesh->CreateMeshSection_LinearColor(MaterialIndex, VertexPositions, Triangles, normals, UV0, vertexColors, tangents, false);
+
+		UMaterialInstance* MatIns = m_SceneManager->GetMaterialInstanceFromContent("Red");
+		if (IsValid(MatIns))
+		{
+			m_procMesh->SetMaterial(MaterialIndex, MatIns);
+		}
+	}
+
+
+	UE_LOG(LogTemp, Log, TEXT("Updated The mesh"));
+}
+
+
+void ALiterarumMesh::SetMeshVertBucket(TSharedPtr<FJsonObject> MeshVertBucketsJson)
+{
+	FMeshVertBucket InData;
+	FJsonObjectConverter::JsonObjectToUStruct(MeshVertBucketsJson.ToSharedRef(), &InData, 0, 0);
+
+	if (CheckVertBucketSizes(InData.NumBuckets))
+	{
+		FVertBucket NewBucket;
+		NewBucket.HashNum = InData.HashNum;
+		NewBucket.VertexPositions = InData.VertexPositions;
+		m_VertBuckets[InData.BucketIndex] = NewBucket;
+		m_IsMeshDirty = EDirtState::Dirty;
+		UE_LOG(LogTemp, Warning, TEXT("Updated Bucket"), *InData.objectName);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Bucket Data but with 0 Bucket Count: %s"), *InData.objectName);
+	}
+}
+
+void ALiterarumMesh::SetMeshTriBucket(TSharedPtr<FJsonObject> MeshTriBucketsJson)
+{
+	FMeshTriBucket InData;
+	FJsonObjectConverter::JsonObjectToUStruct(MeshTriBucketsJson.ToSharedRef(), &InData, 0, 0);
+
+	if (CheckTriBucketSizes(InData.NumBuckets))
+	{
+		FTriBucket NewBucket;
+		NewBucket.HashNum = InData.HashNum;
+		NewBucket.TriIndexs = InData.Tri;
+		NewBucket.MatIndex = InData.MatIndex;
+		m_TriBuckets[InData.BucketIndex] = NewBucket;
+		m_IsMeshDirty = EDirtState::Dirty;
+		UE_LOG(LogTemp, Warning, TEXT("Updated Tri Bucket"), *InData.objectName);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Bucket Data but with 0 Bucket Count: %s"), *InData.objectName);
+	}
+}
+
+bool ALiterarumMesh::CheckVertBucketSizes(uint32 NumBuckets)
+{
+	if (m_VertBuckets.Num() != NumBuckets)
+	{
+		m_VertBuckets.Empty();
+		m_VertBuckets.AddDefaulted(NumBuckets);
+	}
+	return m_VertBuckets.Num() > 0;
+}
+
+bool ALiterarumMesh::CheckTriBucketSizes(uint32 NumBuckets)
+{
+	if (m_TriBuckets.Num() != NumBuckets)
+	{
+		m_TriBuckets.Empty();
+		m_TriBuckets.AddDefaulted(NumBuckets);
+	}
+	return m_TriBuckets.Num() > 0;
+}
+
 

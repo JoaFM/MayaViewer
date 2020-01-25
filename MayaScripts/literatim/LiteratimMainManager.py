@@ -70,6 +70,7 @@ class RVViewManager():
     def send_command_list(self):
         SceneCommands = self.scene.get_command_list()
         for Command in SceneCommands:
+            print "Command>>>"  + str(Command) + "<<<<<<<<<<"
             if not self._literatimMayaClient.SendMessage(Command, LiteratimClient.ResponceHeaders.Command):
                 return 
 

@@ -61,61 +61,9 @@ void ALiteratumActorBase::UpdateChangeHash(FSceneObjectHash& ServerHash)
 
 }
 
-bool ALiteratumActorBase::CheckVertBucketSizes(uint32 NumBuckets)
+
+void ALiteratumActorBase::Finish()
 {
-	if (m_VertBuckets.Num() != NumBuckets)
-	{
-		m_VertBuckets.Empty();
-		m_VertBuckets.AddDefaulted(NumBuckets);
-	}
-	return m_VertBuckets.Num() > 0;
-}
+	m_IsMeshDirty = EDirtState::Clean;
 
-bool ALiteratumActorBase::CheckTriBucketSizes(uint32 NumBuckets)
-{
-	if (m_TriBuckets.Num() != NumBuckets)
-	{
-		m_TriBuckets.Empty();
-		m_TriBuckets.AddDefaulted(NumBuckets);
-	}
-	return m_TriBuckets.Num() > 0;
-}
-
-
-void ALiteratumActorBase::SetMeshVertBucket(TSharedPtr<FJsonObject> MeshVertBucketsJson)
-{
-	FMeshVertBucket InData;
-	FJsonObjectConverter::JsonObjectToUStruct(MeshVertBucketsJson.ToSharedRef(), &InData, 0, 0);
-
-	if (CheckVertBucketSizes(InData.NumBuckets))
-	{
-		FVertBucket NewBucket;
-		NewBucket.HashNum = InData.HashNum;
-		NewBucket.VertexPositions = InData.VertexPositions;
-		m_VertBuckets[InData.BucketIndex] = NewBucket;
-		UE_LOG(LogTemp, Warning, TEXT("Updated Bucket"), *InData.objectName);
-	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("Bucket Data but with 0 Bucket Count: %s"), *InData.objectName);
-	}
-}
-
-void ALiteratumActorBase::SetMeshTriBucket(TSharedPtr<FJsonObject> MeshTriBucketsJson)
-{
-	FMeshTriBucket InData;
-	FJsonObjectConverter::JsonObjectToUStruct(MeshTriBucketsJson.ToSharedRef(), &InData, 0, 0);
-
-	if (CheckTriBucketSizes(InData.NumBuckets))
-	{
-		FTriBucket NewBucket;
-		NewBucket.HashNum = InData.HashNum;
-		NewBucket.TriIndexs = InData.Tri;
-		m_TriBuckets[InData.BucketIndex] = NewBucket;
-		UE_LOG(LogTemp, Warning, TEXT("Updated Tri Bucket"), *InData.objectName);
-	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("Bucket Data but with 0 Bucket Count: %s"), *InData.objectName);
-	}
 }

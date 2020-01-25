@@ -98,6 +98,7 @@ public:
 	UMaterialInstance* GetMaterialInstanceFromContent(FString materials);
 	UMaterial* GetMaterialFromContent(FString materials);
 
+	void SetMeshDone(FString UpToDateObjectName);
 public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
@@ -106,7 +107,7 @@ public:
 private:
 	friend class UCommandList;
 	void SetCamera(FNetCameraInfo NewCamerainfo) { m_CameraInfo = NewCamerainfo; }
-	ALiteratumActorBase* GetSceneActor(FString ActorName);
+	ALiteratumActorBase* GetSceneMeshActor(FString ActorName, bool CreateNew);
 
 
 	UPROPERTY()
