@@ -23,6 +23,8 @@ LiteratimNetworking::~LiteratimNetworking()
 
 bool LiteratimNetworking::Connect()
 {
+	m_connected = true;
+
 	std::string ipAddress = "127.0.0.1";			// IP Address of the server
 	int port = 65432;						// Listening port # on the server
 
@@ -33,6 +35,7 @@ bool LiteratimNetworking::Connect()
 	if (wsResult != 0)
 	{
 		MGlobal::displayInfo("Can't start Winsock, Err #" + wsResult );
+		m_connected = false;
 		return false;
 	}
 
@@ -41,6 +44,7 @@ bool LiteratimNetworking::Connect()
 	if (m_ServerSocket == INVALID_SOCKET)
 	{
 		MGlobal::displayInfo("Can't create socket, Err #" + WSAGetLastError());
+		m_connected = false;
 		WSACleanup();
 		return false;
 	}
@@ -55,7 +59,7 @@ bool LiteratimNetworking::Connect()
 	int connResult = connect(m_ServerSocket, (sockaddr*)&hint, sizeof(hint));
 	if (connResult == SOCKET_ERROR)
 	{
-
+		m_connected = false;
 		MGlobal::displayInfo("Can't connect to server, Err #" + WSAGetLastError());
 		closesocket(m_ServerSocket);
 		WSACleanup();
@@ -68,6 +72,7 @@ bool LiteratimNetworking::Connect()
 	if (result == SOCKET_ERROR)
 	{
 		int error = WSAGetLastError();
+		m_connected = false;
 		return false;
 	}
 	return true;
@@ -75,6 +80,7 @@ bool LiteratimNetworking::Connect()
 
 bool LiteratimNetworking::Disconnect()
 {
+	m_connected = false;
 	closesocket(m_ServerSocket);
 	WSACleanup();
 	return true;
@@ -82,7 +88,9 @@ bool LiteratimNetworking::Disconnect()
 
 void LiteratimNetworking::Tick()
 {
-
+	if (!m_connected) {
+		MGlobal::displayError("Not Connected to server");
+	}
 	WSAPOLLFD PollDes = {};
 
 	PollDes.fd = m_ServerSocket;
@@ -144,7 +152,11 @@ void LiteratimNetworking::ProcessIncomingData()
 				
 				if (commandStr == "WhatTypeAreYou")
 				{
-					LitSendMessage("MAYA", ResponceHeaders::ServerCommand);
+					if (!LitSendMessage("MAYA", ResponceHeaders::ServerCommand))
+					{
+						MGlobal::displayError("Failed to send connection response to server");
+						Disconnect();
+					}
 				}
 				else
 				{
@@ -157,15 +169,19 @@ void LiteratimNetworking::ProcessIncomingData()
 
 void LiteratimNetworking::ProcessIncommingCommand(json::JSON* obj)
 {
-	MGlobal::displayInfo("Ignored Command");
+
+	std::string CommandStr = obj->ToString();
+	MGlobal::displayError(MString("Ignored Command"));
+	MGlobal::displayError(MString("CommandStr"));
 
 }
 
-void LiteratimNetworking::LitSendMessage(std::string message, ResponceHeaders CommandType)
+bool LiteratimNetworking::LitSendMessage(std::string message, ResponceHeaders CommandType)
 {
+	
 	SendHeader head((int)(CommandType), (int)message.size());
-	LitSendBytes((char*)(&head), sizeof(head));
-	LitSendBytes(message.data(), (int)message.size());
+	if (!LitSendBytes((char*)(&head), sizeof(head))) return false;
+	if (!LitSendBytes(message.data(), (int)message.size())) return false;
 }
 
 bool LiteratimNetworking::LitSendBytes(const char* DataToSend, int DataSize)

@@ -128,7 +128,7 @@ void LiteratumMaya::StartUpdateClock()
 	MGlobal::displayInfo("StartUpdateClock");
 	MStatus status2;
 	MainTool.Start();
-	tickID = MTimerMessage::addTimerCallback(0.5, &CallbackTick, 0, &status2);
+	tickID = MTimerMessage::addTimerCallback(0.1f, &CallbackTick, 0, &status2);
 	IsTicking = status2 == MStatus::MStatusCode::kSuccess;
 }
 

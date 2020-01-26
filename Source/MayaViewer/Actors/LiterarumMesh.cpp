@@ -115,7 +115,7 @@ void ALiterarumMesh::SetWholeMeshData(FWholeMeshData& NewData)
 
 	UE_LOG(LogTemp, Log, TEXT("Updated The mesh"));
 }
-
+/*
 void ALiterarumMesh::Finish()
 {
 	ALiteratumActorBase::Finish();
@@ -206,7 +206,7 @@ void ALiterarumMesh::Finish()
 	UE_LOG(LogTemp, Log, TEXT("Updated The mesh"));
 }
 
-
+*/
 void ALiterarumMesh::SetMeshVertBucket(TSharedPtr<FJsonObject> MeshVertBucketsJson)
 {
 	FMeshVertBucket InData;
@@ -268,4 +268,75 @@ bool ALiterarumMesh::CheckTriBucketSizes(uint32 NumBuckets)
 	return m_TriBuckets.Num() > 0;
 }
 
+bool ALiterarumMesh::CheckMeshBucketSizes(uint32 NumBuckets)
+{
+	if (m_MeshBuckets.Num() != NumBuckets)
+	{
+		m_MeshBuckets.Empty();
+		m_MeshBuckets.AddDefaulted(NumBuckets);
+	}
+	return m_MeshBuckets.Num() > 0;
+}
 
+void ALiterarumMesh::SetMeshBucket(TSharedPtr<FJsonObject> MeshBucketsJson)
+{
+	FMeshBucket InData;
+	FJsonObjectConverter::JsonObjectToUStruct(MeshBucketsJson.ToSharedRef(), &InData, 0, 0);
+	CheckMeshBucketSizes(InData.NumbBuckets);
+	m_MeshBuckets[InData.BucketIndex] = InData;
+
+}
+
+void ALiterarumMesh::Finish()
+{
+	ALiteratumActorBase::Finish();
+
+
+	//////////////////////////////////////////////////////////////////////////
+	///                         Materials
+	//////////////////////////////////////////////////////////////////////////
+
+
+
+
+	// get vert index length
+	int32 vertCount = 0;
+	TArray<FVector> VertexPositions;
+	TArray<int32> Triangles;
+	TArray<FVector> normals;
+
+	int CurTriI = 0;
+
+	for (FMeshBucket& CurBucket : m_MeshBuckets)
+	{
+		int CurVertI = 0;
+		while (CurVertI < CurBucket.VertPositionsXYZ.Num())
+		{
+			VertexPositions.Add(FVector(CurBucket.VertPositionsXYZ[CurVertI], CurBucket.VertPositionsXYZ[CurVertI + 2] , CurBucket.VertPositionsXYZ[CurVertI + 1]));
+			normals.Add(FVector(CurBucket.VertNormalsXYZ[CurVertI], CurBucket.VertNormalsXYZ[CurVertI + 2], CurBucket.VertNormalsXYZ[CurVertI +1]));
+			CurVertI += 3;
+		}
+
+		for (int tri : CurBucket.TriIndices)
+		{
+			Triangles.Add(tri + CurTriI);
+		}
+		CurTriI += CurBucket.TriIndices.Num();
+	}
+
+
+	//////////////////////////////////////////////////////////////////////////
+	///                           Construct
+	//////////////////////////////////////////////////////////////////////////
+
+	TArray<FVector2D> UV0;
+	TArray<FProcMeshTangent> tangents;
+	TArray<FLinearColor> vertexColors;
+	m_procMesh->CreateMeshSection_LinearColor(0, VertexPositions, Triangles, normals, UV0, vertexColors, tangents, false);
+
+	UMaterialInstance* MatIns = m_SceneManager->GetMaterialInstanceFromContent("Red");
+	if (IsValid(MatIns))
+	{
+		m_procMesh->SetMaterial(0, MatIns);
+	}
+}

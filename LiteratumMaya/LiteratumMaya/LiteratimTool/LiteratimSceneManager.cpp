@@ -33,7 +33,6 @@ void LiteratimSceneManager::Tick()
 	UpdateSceneDescription();
 
 	TickMeshQuery();
-	m_SceneObjects.begin();
 }
 
 
@@ -41,10 +40,10 @@ void LiteratimSceneManager::TickMeshQuery()
 {
 	if (m_ActiveQuryHash)
 	{
-		LiteratimMesh& LitMesh = m_SceneObjects[m_ActiveQuryHash];
-		if (!LitMesh.IsQuryDone())
+		LiteratimMesh* LitMesh = m_SceneObjects[m_ActiveQuryHash];
+		if (!LitMesh->IsQuryDone())
 		{
-			LitMesh.RunQuery(m_LitNetwork);
+			LitMesh->RunQuery(m_LitNetwork);
 		}
 		else
 		{
@@ -63,12 +62,26 @@ void LiteratimSceneManager::ProgressToNextMesh()
 		{
 			m_ActiveQuryHash = (m_SceneObjects.begin()->first);
 			m_CurrUpdatemeshIterator = m_SceneObjects.begin();
+			m_CurrUpdatemeshIterator->second->StartQuery();
 		}
 		else
 		{
 			m_ActiveQuryHash = 0;
 		}
 	}
+	else
+	{
+		m_ActiveQuryHash = (m_CurrUpdatemeshIterator->first);
+		m_CurrUpdatemeshIterator->second->StartQuery();
+	}
+}
+
+void LiteratimSceneManager::RemoveSceneObject(unsigned int ItemToRemove)
+{
+	auto it = m_SceneObjects.find(ItemToRemove);
+
+	it->second = nullptr;
+	m_SceneObjects.erase(it);
 }
 
 void LiteratimSceneManager::UpdateSceneDescription()
@@ -111,7 +124,7 @@ void LiteratimSceneManager::UpdateSceneDescription()
 		//cross compare keys
 		for (unsigned int itemHash : vints)
 		{
-			if (!ActiveObjects.count(itemHash) || (!m_SceneObjects[itemHash].IsValid()))
+			if (!ActiveObjects.count(itemHash) || (!m_SceneObjects[itemHash]->IsValid()))
 			{
 				RemoveSceneMesh(itemHash);
 			}
@@ -127,12 +140,15 @@ bool LiteratimSceneManager::AddSceneMesh(MObjectHandle ObjectHandle)
 		return false;
 	}
 
-	LiteratimMesh LMesh(ObjectHandle);
-	m_SceneObjects[ObjectHandle.hashCode()] = LMesh;
+	LiteratimMesh*  LMesh = new LiteratimMesh(ObjectHandle);
+	m_SceneObjects.insert_or_assign(ObjectHandle.hashCode(), LMesh);
+
 	MGlobal::displayInfo(MString("Added mesh") );
 
 	m_CurrUpdatemeshIterator = m_SceneObjects.begin();
-	//TODO: Send make new object
+	m_ActiveQuryHash = m_CurrUpdatemeshIterator->first;
+	m_CurrUpdatemeshIterator->second->StartQuery();
+	//#TODO: Send make new object
 	return true;
 }
 
@@ -142,7 +158,7 @@ void LiteratimSceneManager::RemoveSceneMesh(unsigned int itemToRemove)
 
 	if (it != m_SceneObjects.end())
 	{
-		m_SceneObjects.erase(it);
+		RemoveSceneObject(it->first);
 		if (m_ActiveQuryHash == itemToRemove)
 		{
 			// make sure we are not qurying a deleted object
@@ -160,6 +176,6 @@ void LiteratimSceneManager::RemoveSceneMesh(unsigned int itemToRemove)
 	}
 	MGlobal::displayInfo(MString("removed mesh"));
 
-	//TODO: Send remove object
+	//#TODO: Send remove object
 
 }

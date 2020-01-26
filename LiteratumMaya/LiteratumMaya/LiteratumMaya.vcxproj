@@ -112,7 +112,7 @@
       <ExceptionHandling>Sync</ExceptionHandling>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <AdditionalOptions>%(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>.;C:\Program Files\Autodesk\Maya2018\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;D:\Program Files\Autodesk\Maya2018\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeaderOutputFile>$(Configuration)\LiteratumMaya.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
     <Link>
@@ -123,7 +123,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>Foundation.lib;OpenMaya.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\Program Files\Autodesk\Maya2018\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>D:\Unreal\Maya2018-DEVKIT_Windows\devkitBase\lib;D:\Program Files\Autodesk\Maya2018\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <OutputFile>$(Configuration)\LiteratumMaya.mll</OutputFile>
       <ImportLibrary>$(Configuration)\LiteratumMaya.lib</ImportLibrary>
       <ProgramDatabaseFile>$(Configuration)\LiteratumMaya.pdb</ProgramDatabaseFile>

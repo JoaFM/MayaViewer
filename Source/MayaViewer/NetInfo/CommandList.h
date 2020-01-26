@@ -48,6 +48,8 @@ private:
 	void SetMeshBucketTris(TSharedPtr<FJsonObject> MeshTriBucketsJson);
 	void SetMeshDone(TSharedPtr<FJsonObject> commandJsonO);
 	
+	void SetMeshBucket(TSharedPtr<FJsonObject> MeshBucketsJson);
+
 private:
 
 	TMap<FString, CommandFunctionPtrType> Actions;

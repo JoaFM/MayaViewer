@@ -301,3 +301,20 @@ void ULiteratumSceneManager::SetMeshBucketTris(TSharedPtr<FJsonObject> MeshVertB
 		UE_LOG(LogTemp, Error, TEXT("Tring to set mesh triangle data on an object that is not a mesh: %s"), *objname);
 	}
 }
+
+void ULiteratumSceneManager::SetMeshBucket(TSharedPtr<FJsonObject> MeshBucketsJson)
+{
+	FString ObjectName = MeshBucketsJson->GetStringField("ObjectName");
+	ALiteratumActorBase* SceneActor = GetSceneMeshActor(ObjectName, true);
+
+
+	ALiterarumMesh* SceneMeshActor = Cast<ALiterarumMesh>(SceneActor);
+	if (IsValid(SceneActor))
+	{
+		SceneMeshActor->SetMeshBucket(MeshBucketsJson);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Tring to set mesh  data on an object that is not a mesh: %s"), *ObjectName);
+	}
+}

@@ -17,7 +17,7 @@ public:
 	void SetConnection(LiteratimNetworking* LitNetwork);
 
 public:
-	std::map<unsigned int, LiteratimMesh> m_SceneObjects;
+	std::map<unsigned int, LiteratimMesh*> m_SceneObjects;
 
 
 private:
@@ -25,11 +25,12 @@ private:
 
 	//Update Loop
 	/* Iterator for interegating meshes*/
-	std::map<unsigned int, LiteratimMesh>::iterator m_CurrUpdatemeshIterator;
+	std::map<unsigned int, LiteratimMesh*>::iterator m_CurrUpdatemeshIterator;
 	unsigned int m_ActiveQuryHash = 0;
 
 	void TickMeshQuery();
 	void ProgressToNextMesh();
+	void RemoveSceneObject(unsigned int ItemToRemove);
 private:
 	void UpdateSceneDescription();
 	bool AddSceneMesh(MObjectHandle ObjectHandle);

@@ -110,6 +110,27 @@ public:
 		FVector Max;
 };
 
+USTRUCT()
+struct MAYAVIEWER_API FMeshBucket : public FCommandBase
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY()
+		FString ObjectName;
+	UPROPERTY()
+		int BucketIndex;
+	UPROPERTY()
+		TArray <float> VertPositionsXYZ;
+	UPROPERTY()
+		TArray <float> VertNormalsXYZ;
+	UPROPERTY()
+		TArray <int> TriIndices;
+	UPROPERTY()
+		int NumbBuckets;
+};
+
+
 
 USTRUCT()
 struct MAYAVIEWER_API FWholeMeshData : public FCommandBase
@@ -169,6 +190,12 @@ private:
 	TArray<FVertBucket> m_VertBuckets;
 	TArray<FTriBucket> m_TriBuckets;
 
+	TArray<FMeshBucket> m_MeshBuckets;
+
 	bool CheckVertBucketSizes(uint32 NumBuckets);
 	bool CheckTriBucketSizes(uint32 NumBuckets);
+	bool CheckMeshBucketSizes(uint32 NumBuckets);
+	
+public:
+	void SetMeshBucket(TSharedPtr<FJsonObject> MeshBucketsJson);
 };

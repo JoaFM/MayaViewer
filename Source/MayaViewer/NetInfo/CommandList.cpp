@@ -21,6 +21,9 @@ void UCommandList::UpdateActions()
 		Actions.Add("SetMeshBucketTris", &UCommandList::SetMeshBucketTris);
 		Actions.Add("MeshDone", &UCommandList::SetMeshDone);
 
+		Actions.Add("SetMeshBucket", &UCommandList::SetMeshBucket);
+
+		
 		
 
 		
@@ -142,6 +145,11 @@ void UCommandList::SetMeshBucketTris(TSharedPtr<FJsonObject> MeshTriBucketsJson)
 void UCommandList::SetMeshDone(TSharedPtr<FJsonObject> commandJsonO)
 {
 	m_ViewerScene->SetMeshDone(commandJsonO->GetStringField("objectName"));
+}
+
+void UCommandList::SetMeshBucket(TSharedPtr<FJsonObject> MeshBucketsJson)
+{
+	m_ViewerScene->SetMeshBucket(MeshBucketsJson);
 }
 
 // --------------------  Out going Commands 

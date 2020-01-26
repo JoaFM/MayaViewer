@@ -42,7 +42,14 @@ public:
 	bool Connect();
 	bool Disconnect();
 
+
 	void Tick();
+
+	//Communication
+	bool LitSendMessage(std::string message, ResponceHeaders CommandType);
+	
+	bool m_connected = false;
+
 private:
 	char m_buf[4096];
 	BufferStack m_CurrentDataStream;
@@ -60,7 +67,6 @@ private:
 	ResponceHeaders m_PackageResponceType;
 
 	void ProcessIncommingCommand(json::JSON* obj);
-	void LitSendMessage(std::string message, ResponceHeaders CommandType);
 	bool LitSendBytes(const char* DataToSend, int DataSize);
 };
 

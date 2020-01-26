@@ -132,4 +132,5 @@ protected:
 public:
 	void SetMeshBucketVerts(TSharedPtr<FJsonObject> MeshVertBucketsJson);
 	void SetMeshBucketTris(TSharedPtr<FJsonObject> MeshVertBucketsJson);
+	void SetMeshBucket(TSharedPtr<FJsonObject> MeshBucketsJson);
 };
