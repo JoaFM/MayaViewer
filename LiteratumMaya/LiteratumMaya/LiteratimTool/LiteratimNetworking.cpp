@@ -178,10 +178,16 @@ void LiteratimNetworking::ProcessIncommingCommand(json::JSON* obj)
 
 bool LiteratimNetworking::LitSendMessage(std::string message, ResponceHeaders CommandType)
 {
-	
+	bool SendOK = true;
 	SendHeader head((int)(CommandType), (int)message.size());
-	if (!LitSendBytes((char*)(&head), sizeof(head))) return false;
-	if (!LitSendBytes(message.data(), (int)message.size())) return false;
+	SendOK = SendOK && LitSendBytes((char*)(&head), sizeof(head));
+	SendOK = SendOK && LitSendBytes(message.data(), (int)message.size());
+
+	if (!SendOK)
+	{
+		Disconnect();
+	}
+	return SendOK;
 }
 
 bool LiteratimNetworking::LitSendBytes(const char* DataToSend, int DataSize)
@@ -194,6 +200,20 @@ bool LiteratimNetworking::LitSendBytes(const char* DataToSend, int DataSize)
 		sendResult = send(m_ServerSocket, DataToSend + total, bytesleft, 0);
 		if (sendResult == SOCKET_ERROR)
 		{
+
+			int err;
+			char msgbuf[256];   // for a message up to 255 bytes.
+			msgbuf[0] = '\0';    // Microsoft doesn't guarantee this on man page.
+			err = WSAGetLastError();
+			FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,   // flags
+				NULL,                // lpsource
+				err,                 // message id
+				MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),    // languageid
+				msgbuf,              // output buffer
+				sizeof(msgbuf),     // size of msgbuf, bytes
+				NULL);
+
+			MGlobal::displayError(MString(msgbuf));
 			return false;
 		}
 		if (sendResult == 0)

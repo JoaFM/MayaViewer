@@ -61,9 +61,6 @@ public:
 
 	UPROPERTY()
 		TArray<float> WorldMatrix;
-
-	UPROPERTY()
-		FVector scale;
 };
 
 
@@ -82,16 +79,8 @@ public:
 	void Setup(UCommandList* m_CommandList, UWorld* ParentWorld);
 
 	//Cene
-	void UpdateSceneDescription(TSharedPtr<FJsonObject> InputJsonObject);
 	
 	void UpdateSceneObjectTransfrom(TSharedPtr<FJsonObject> InputString);
-	void RequestObjectTransform(FString ObjectName);
-	
-	void RequestObjectMeta(FString ObjectName);
-	void SetObjectMeta(TSharedPtr<FJsonObject> InputJsonObject);
-	
-	void SetObjectWholeData (TSharedPtr<FJsonObject> InputJsonObject);
-	void RequestObjectWholeData(FString ObjectName);
 
 	FVector MayaToUE4SpacePosition(FVector InPosition) { return FVector(InPosition.X,InPosition.Z,InPosition.Y); }
 
@@ -99,6 +88,7 @@ public:
 	UMaterial* GetMaterialFromContent(FString materials);
 
 	void SetMeshDone(FString UpToDateObjectName);
+	void SetMaterialInfo(TSharedPtr<FJsonObject> MaterialsInfoJson);
 public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)

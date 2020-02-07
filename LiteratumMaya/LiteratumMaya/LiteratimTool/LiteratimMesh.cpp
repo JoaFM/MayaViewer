@@ -1,9 +1,15 @@
 #include "LiteratimMesh.h"
 
 #include "maya/MFnMesh.h"
+#include "maya/MFnMesh.h"
+#include "maya/MDagPath.h"
 #include "maya/MPlug.h"
-
+#include "maya/MUuid.h"
+#include "maya/MMatrix.h"
+#include "maya/MFnTransform.h"
+#include "maya/MTransformationMatrix.h"
 #include <maya/MGlobal.h>
+#include <maya/MFnMatrixData.h>
 
 #include <iostream>   // std::cout
 #include <string>   
@@ -35,34 +41,40 @@ bool LiteratimMesh::IsValid() const
 
 void LiteratimMesh::StartQuery()
 {
-	MGlobal::displayInfo("-------StartQuery-------");
-
 	if (!m_ObjHandle.isValid()) return;
-
+	ClearData();
 	IsBeingQueried = true; 
 	
-	MFnMesh msh(m_ObjHandle.object());
+	
+ 	MFnMesh msh(m_ObjHandle.object());
+
+	
 
 	// Copy Tri Data
 	msh.getTriangles(m_FaceTriangles, m_TriangleInexies);
 	// copy verts
 	msh.getPoints(m_vertLocations);
-	//copy normals
-	msh.getNormals(m_normals, MSpace::kObject);
 
-	 these normals are shared so useless less make a new plan
+
+	MIntArray FaceId;
+	FaceId.clear();
 	for (unsigned int i = 0; i < m_FaceTriangles.length(); i++)
 	{
-		MIntArray ThisFaceNormals;
-		msh.getFaceNormalIds( i, ThisFaceNormals );
-		for (unsigned int newI = 0; newI < ThisFaceNormals.length(); newI++)
+		MFloatVectorArray Fnormals;
+		msh.getFaceVertexNormals(i, Fnormals);
+		msh.getPolygonVertices(i, FaceId);
+		int FaceArrayIndex = (int)m_faceInfo.size();
+		m_faceInfo.push_back(std::map<unsigned int, MFloatVector>());
+		for (unsigned int fi = 0; fi < Fnormals.length(); fi++)
 		{
-			m_FaceNormals.append(ThisFaceNormals[newI]);
+			m_faceInfo[FaceArrayIndex].insert(std::pair<unsigned int, MFloatVector>(FaceId[fi], Fnormals[fi]));
 		}
 	}
+
+
 	//Update Buckets
 	CheckBucketSizes();
-	CheckShaders();
+	GetShaderInfo();
 	DirtyAllBuckets();
 
 	// start mesh qury
@@ -75,38 +87,110 @@ void LiteratimMesh::StartQuery()
 	m_CurrTriIndex = 0;
 	m_CurrentBucketIndex = 0;
 	m_CurrFaceIndex = 0;
+	m_indexList = 0;
 }
 
 void LiteratimMesh::RunQuery(LiteratimNetworking* LitNetWork)
 {
 	// #TODO: Run the vert and tri things here
-	
+	if (!LitNetWork->IsConnected())
+	{
+		MGlobal::displayInfo("Server Not Connected: Not checking mesh");
+	}
+
 	QueryTriangles();
 	TickQuery(LitNetWork);
-	//#TODO: if the mesh is done, state it is so and clean up copied data
+	if (m_MaterialsDirty) SendMaterialUpdate(LitNetWork);
 
 	CheckForIsClean(LitNetWork);
 }
 
-std::string LiteratimMesh::GetObjectHashAsString() const
+bool LiteratimMesh::QueryTransform(LiteratimNetworking* LitNetWork)
 {
-	return std::to_string(m_ObjHandle.hashCode());
+	MFnDagNode dagPath(m_ObjHandle.object());
+	MDagPath thisDagNode;
+	dagPath.getPath(thisDagNode);
+	MMatrix WorldMatrix = thisDagNode.inclusiveMatrix();
+
+	
+	std::vector<float> UnpackedMatrix;
+	UnpackedMatrix.reserve(16);
+	float NewTransformHash = 0;
+	for (int row = 0; row < 4; row++)
+	{
+		for (int col = 0; col < 4; col++)
+		{	
+			UnpackedMatrix.push_back((float)WorldMatrix(row, col));
+			NewTransformHash += (float)WorldMatrix(row, col);
+		}
+	}
+
+
+	if (m_TransformHash != NewTransformHash)
+	{
+		json::JSON obj;
+
+		obj["Command"] = "SetObjectTransform";
+		obj["ObjectName"] = GetHash();
+		obj["WorldMatrix"] = json::Array();
+		
+		for (int i = 0; i < 16; i++)
+		{
+			obj["WorldMatrix"].append(UnpackedMatrix[i]);
+		}
+
+		std::string MessageJsonString = obj.dump(0, "");
+		if (LitNetWork->LitSendMessage(MessageJsonString, ResponceHeaders::Command))
+		{
+			m_TransformHash = NewTransformHash;
+		}
+		return true;
+	}
+	else
+	{
+		return false;
+	}
 }
 
-void LiteratimMesh::CheckShaders()
+std::string LiteratimMesh::GetHashFromMObject(const  MObject& Obj)
+{
+	MFnDependencyNode DG(Obj);
+	int len = 0;
+	const char* rv = DG.uuid().asString().asChar(len);
+
+	std::string ts(rv);
+
+	return ts;
+}
+
+std::string LiteratimMesh::GetHash() 
+{
+
+	MFnDependencyNode DG(m_ObjHandle.object());
+	int len = 0;
+	const char* rv = DG.uuid().asString().asChar(len);
+	std::string ts(rv);
+	return ts;
+}
+
+void LiteratimMesh::GetShaderInfo()
 {
 	if (!m_ObjHandle.isValid()) return;
 
 	MFnMesh msh(m_ObjHandle.object());
 
+
 	MObjectArray ShaderArray;
-	MIntArray intArrayShaderIndex;
-	msh.getConnectedShaders(0, ShaderArray, intArrayShaderIndex);
+	msh.getConnectedShaders(0, ShaderArray, m_TriShaderIndex);
 	
 	// relist the materials
 	// #TODO: On change message render to remap materials
+	
+	std::vector<MString> NewMaterials;
+
+	// List materials applied
 	{
-		m_Materials.clear();
+		NewMaterials.clear();
 		for (unsigned int i = 0; i < ShaderArray.length(); i++)
 		{
 			MFnDependencyNode shaderGroup(ShaderArray[i]);
@@ -114,13 +198,34 @@ void LiteratimMesh::CheckShaders()
 			MPlugArray connectedPlugs;
 			shaderPlug.connectedTo(connectedPlugs, true, false);
 			MFnDependencyNode fnDN(connectedPlugs[0].node());
-			m_Materials.push_back(MString(fnDN.name()));
+			NewMaterials.push_back(MString(fnDN.name()));
 		}
-		if (m_Materials.size() == 0)
+		if (NewMaterials.size() == 0)
 		{
-			m_Materials.push_back("None");
+			NewMaterials.push_back("None");
 		}
 	}
+
+	// Check if materials have changed
+	{
+		if (NewMaterials.size() != m_Materials.size())
+		{
+			m_Materials = NewMaterials;
+			m_MaterialsDirty = true;
+		}
+		{
+			for (int i = 0; i < m_Materials.size(); i++)
+			{
+				if (m_Materials[i] != NewMaterials[i])
+				{
+					m_MaterialsDirty = true;
+					m_Materials = NewMaterials;
+					return;
+				}
+			}
+		}
+	}
+
 }
 
 
@@ -148,66 +253,66 @@ void LiteratimMesh::QueryTriangles()
 
 void LiteratimMesh::TickQuery(LiteratimNetworking* LitNetWork)
 {
-	MGlobal::displayInfo("Start QT");
-
 	SendBucket sendBucket;
+	std::vector<std::vector<int>> materialJumps;
+	sendBucket.MaterialCount = (int)m_Materials.size();
+	for (auto& mat : m_Materials)
 	{
-		unsigned int indexList = 0;
+		materialJumps.push_back(std::vector<int>());
+	}
 
+	{
 		unsigned int FaceCounter = m_CurrFaceIndex;
 		for (; FaceCounter < std::min(m_CurrFaceIndex + m_PerBucketFaceCount, m_FaceTriangles.length()); FaceCounter++)
 		{
-			//MGlobal::displayInfo("Process a face");
-			//MGlobal::displayInfo(std::to_string(FaceCounter).c_str());
+			std::vector<int>& CurTriList = materialJumps[m_TriShaderIndex[FaceCounter]];
 
 			for ( int faceTriIndex = 0; faceTriIndex < m_FaceTriangles[FaceCounter]; faceTriIndex++)
 			{
 				unsigned int TriIndex = m_TriangleInexies[m_CurrTriIndex++];
-				//MGlobal::displayInfo(std::to_string(TriIndex).c_str());
 
+				MFloatVector& Normal = m_faceInfo[FaceCounter][TriIndex];
 				sendBucket.VertPositions.push_back(m_vertLocations[TriIndex].x);
 				sendBucket.VertPositions.push_back(m_vertLocations[TriIndex].y);
 				sendBucket.VertPositions.push_back(m_vertLocations[TriIndex].z);
-				sendBucket.VertNormals.push_back(m_normals[TriIndex].x);
-				sendBucket.VertNormals.push_back(m_normals[TriIndex].y);
-				sendBucket.VertNormals.push_back(m_normals[TriIndex].z);
-				sendBucket.IndexList.push_back(indexList++);
-				//MGlobal::displayInfo(std::to_string(m_CurrTriIndex).c_str());
-
+				sendBucket.VertNormals.push_back(Normal.x);
+				sendBucket.VertNormals.push_back(Normal.y);
+				sendBucket.VertNormals.push_back(Normal.z);
+				CurTriList.push_back(m_indexList++);
 
 				TriIndex = m_TriangleInexies[m_CurrTriIndex++];
-				//MGlobal::displayInfo(std::to_string(TriIndex).c_str());
-
+				Normal = m_faceInfo[FaceCounter][TriIndex];
 				sendBucket.VertPositions.push_back(m_vertLocations[TriIndex].x);
 				sendBucket.VertPositions.push_back(m_vertLocations[TriIndex].y);
 				sendBucket.VertPositions.push_back(m_vertLocations[TriIndex].z);
-				sendBucket.VertNormals.push_back(m_normals[TriIndex].x);
-				sendBucket.VertNormals.push_back(m_normals[TriIndex].y);
-				sendBucket.VertNormals.push_back(m_normals[TriIndex].z);
-				sendBucket.IndexList.push_back(indexList++);
-				//MGlobal::displayInfo(std::to_string(m_CurrTriIndex).c_str());
-
+				sendBucket.VertNormals.push_back(Normal.x);
+				sendBucket.VertNormals.push_back(Normal.y);
+				sendBucket.VertNormals.push_back(Normal.z);
+				CurTriList.push_back(m_indexList++);
 
 				TriIndex = m_TriangleInexies[m_CurrTriIndex++];
-				//MGlobal::displayInfo(std::to_string(TriIndex).c_str());
-
+				Normal = m_faceInfo[FaceCounter][TriIndex];
 				sendBucket.VertPositions.push_back(m_vertLocations[TriIndex].x);
 				sendBucket.VertPositions.push_back(m_vertLocations[TriIndex].y);
 				sendBucket.VertPositions.push_back(m_vertLocations[TriIndex].z);
-				sendBucket.VertNormals.push_back(m_normals[TriIndex].x);
-				sendBucket.VertNormals.push_back(m_normals[TriIndex].y);
-				sendBucket.VertNormals.push_back(m_normals[TriIndex].z);
-				sendBucket.IndexList.push_back(indexList++);
-				//MGlobal::displayInfo(std::to_string(m_CurrTriIndex).c_str());
+				sendBucket.VertNormals.push_back(Normal.x);
+				sendBucket.VertNormals.push_back(Normal.y);
+				sendBucket.VertNormals.push_back(Normal.z);
+				CurTriList.push_back(m_indexList++);
 			}
 		}
 		m_CurrFaceIndex += FaceCounter - m_CurrFaceIndex;
 	}
+		
+	for (std::vector<int>& TriList : materialJumps)
+	{
+		sendBucket.IndexList.push_back((int)TriList.size());
+		sendBucket.IndexList.insert(sendBucket.IndexList.end(), TriList.begin(), TriList.end());
+	}
 	sendBucket.GenerateHash();
+
 	if (m_MeshBuckets[m_CurrentBucketIndex].hash != sendBucket.hashNum)
 	{
-		MGlobal::displayInfo("----------------");
-
 		SendMeshUpdate(sendBucket, m_CurrentBucketIndex, LitNetWork);
 		m_MeshBuckets[m_CurrentBucketIndex].hash = sendBucket.hashNum;
 		m_MeshBuckets[m_CurrentBucketIndex].isDirty = false;
@@ -223,12 +328,12 @@ void LiteratimMesh::TickQuery(LiteratimNetworking* LitNetWork)
 
 void SendBucket::GenerateHash()
 {
-	float hashnum = 1;
+	unsigned int hashnum = 1;
 
 	for (unsigned int i = 0; i < VertPositions.size(); i++)
 	{
-		hashnum += VertPositions[i] * (i * 1.12352456f);
-		hashnum += VertNormals[i] * (i * 1.12352456f);
+		hashnum += (unsigned int)((VertPositions[i] * 100) * (i * 1285 ));
+		hashnum += (unsigned int)((VertNormals[i] * 1000) * (i * 123));
 	}
 
 	unsigned int ihash = 1;
@@ -242,19 +347,16 @@ void SendBucket::GenerateHash()
 
 void LiteratimMesh::SendMeshUpdate(SendBucket& sendBucket, int BucketIndex, LiteratimNetworking* LitNetWork)
 {
-
 	json::JSON obj;
 
-	
 	obj["Command"] = "SetMeshBucket";
-	obj["ObjectName"] = std::to_string(this->m_ObjHandle.hashCode());
+	obj["ObjectName"] = GetHash();
 	obj["BucketIndex"] = BucketIndex;
 	obj["VertPositionsXYZ"] = json::Array();
 	obj["VertNormalsXYZ"] = json::Array();
 	obj["TriIndices"] = json::Array();
+	obj["MaterialCount"] = sendBucket.MaterialCount;
 	obj["NumbBuckets"] = (int)m_MeshBuckets.size();
-
-
 
 	for (int i = 0; i < sendBucket.VertPositions.size(); i++)
 	{
@@ -271,7 +373,6 @@ void LiteratimMesh::SendMeshUpdate(SendBucket& sendBucket, int BucketIndex, Lite
 	float dataSent = (float)MessageJsonString.size() / 1024.0f;
 	MString feedback(std::to_string(dataSent).c_str());
 	MGlobal::displayInfo("Send mesh update: " + feedback + "kbps");
-
 	LitNetWork->LitSendMessage(MessageJsonString, ResponceHeaders::Command);
 }
 
@@ -285,16 +386,14 @@ void LiteratimMesh::CheckForIsClean(LiteratimNetworking* LitNetWork)
 			return;
 		}
 	}
+
+	ClearData();
 	// cleanup
 	IsBeingQueried = false;
-	m_FaceTriangles.clear();
-	m_FaceNormals.clear();
-	m_TriangleInexies.clear();
-	m_vertLocations.clear();
-	m_normals.clear();
+
 	if (m_MeshWasEdited)
 	{
-		std::string SCommand = std::string("{\"Command\" : \"MeshDone\",\"ObjectName\":\"") + GetObjectHashAsString() + std::string("\"}");
+		std::string SCommand = std::string("{\"Command\" : \"MeshDone\",\"ObjectName\":\"") + GetHash() + std::string("\"}");
 		LitNetWork->LitSendMessage(SCommand, ResponceHeaders::Command);
 	}
 	m_MeshWasEdited = false;
@@ -307,4 +406,33 @@ void LiteratimMesh::DirtyAllBuckets()
 	{
 		hs.isDirty = true;
 	}
+}
+
+void LiteratimMesh::ClearData()
+{
+	m_FaceTriangles.clear();
+	m_faceInfo.clear();
+	m_TriangleInexies.clear();
+	m_vertLocations.clear();
+}
+
+void LiteratimMesh::SendMaterialUpdate(LiteratimNetworking* LitNetWork)
+{
+	 
+	std::string SCommand = std::string("{\"Command\" : \"SetMaterialNames\", \"ObjectName\":\"")
+		+ GetHash()
+		+ std::string("\",\"MaterialNames\":[");
+		
+		
+	
+	for (int i = 0; i < m_Materials.size(); i++)
+	{
+		SCommand += std::string("\"") + m_Materials[i].asUTF8() + std::string("\"");
+		if (i != m_Materials.size() - 1) 
+		{
+			SCommand +=std::string(",");
+		}
+	}
+	SCommand += std::string("]}");
+	m_MaterialsDirty = !LitNetWork->LitSendMessage(SCommand, ResponceHeaders::Command);
 }

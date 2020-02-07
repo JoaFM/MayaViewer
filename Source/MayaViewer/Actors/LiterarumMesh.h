@@ -110,6 +110,22 @@ public:
 		FVector Max;
 };
 
+
+USTRUCT()
+struct MAYAVIEWER_API FMaterialInfo : public FCommandBase
+{
+	GENERATED_BODY()
+
+public:
+
+	UPROPERTY()
+		FString ObjectName;
+
+	UPROPERTY()
+		TArray<FString> MaterialNames;
+};
+
+
 USTRUCT()
 struct MAYAVIEWER_API FMeshBucket : public FCommandBase
 {
@@ -128,6 +144,8 @@ public:
 		TArray <int> TriIndices;
 	UPROPERTY()
 		int NumbBuckets;
+	UPROPERTY()
+		int MaterialCount;
 };
 
 
@@ -176,7 +194,10 @@ public:
 
 	void SetMeshVertBucket(TSharedPtr<FJsonObject> MeshVertBucketsJson);
 	void SetMeshTriBucket(TSharedPtr<FJsonObject> MeshTriBucketsJson);
+	void SetMeshBucket(TSharedPtr<FJsonObject> MeshBucketsJson);
+	void SetMaterialInfo(TSharedPtr<FJsonObject> MeshBucketsJson);
 
+	
 
 	virtual void Finish() override;
 
@@ -189,13 +210,15 @@ private:
 	FBox m_MeshBounds;
 	TArray<FVertBucket> m_VertBuckets;
 	TArray<FTriBucket> m_TriBuckets;
-
 	TArray<FMeshBucket> m_MeshBuckets;
+	TArray<FString> m_Material;
+	int m_numMaterials = 1;
 
 	bool CheckVertBucketSizes(uint32 NumBuckets);
 	bool CheckTriBucketSizes(uint32 NumBuckets);
 	bool CheckMeshBucketSizes(uint32 NumBuckets);
 	
+	void UpdateMaterial();
 public:
-	void SetMeshBucket(TSharedPtr<FJsonObject> MeshBucketsJson);
+
 };

@@ -20,8 +20,6 @@ ALiterarumMesh::ALiterarumMesh()
 
 void ALiterarumMesh::OnConnect()
 {
-	m_SceneManager->RequestObjectTransform(GetObjectName());
-	m_SceneManager->RequestObjectMeta(GetObjectName());
 }
 
 void ALiterarumMesh::Tick(float DeltaSeconds)
@@ -33,27 +31,14 @@ void ALiterarumMesh::Tick(float DeltaSeconds)
 	{
 		DrawDebugBox(
 			GetWorld(),
-			m_MeshBounds.GetCenter(),
-			m_MeshBounds.GetExtent(),
+			m_procMesh->Bounds.GetBox().GetCenter(),
+			m_procMesh->Bounds.GetBox().GetExtent(),
 			FQuat::Identity,
 			FColor(0, 0, 255), false, 1.0f
 		);
 	}
 
-	if (m_IsMeshDirty == EDirtState::Dirty)
-	{
-		m_SceneManager->RequestObjectMeta(GetObjectName());
-		m_SceneManager->RequestObjectWholeData(GetObjectName());
-		m_IsMeshDirty = EDirtState::PendingUpdate;
-	}
-
-	if (m_IsTransformDirty == EDirtState::Dirty)
-	{
-		m_SceneManager->RequestObjectMeta(GetObjectName());
-		m_SceneManager->RequestObjectTransform(GetObjectName());
-		m_IsTransformDirty = EDirtState::PendingUpdate;
-	}
-
+	
 }
 
 void ALiterarumMesh::SetMeshMeta(FMeshObjectMeta& NewMeta)
@@ -278,13 +263,37 @@ bool ALiterarumMesh::CheckMeshBucketSizes(uint32 NumBuckets)
 	return m_MeshBuckets.Num() > 0;
 }
 
+
+void ALiterarumMesh::UpdateMaterial()
+{
+	for (int MatarialIndex = 0; MatarialIndex < m_Material.Num(); MatarialIndex++)
+	{
+	
+		UMaterialInstance* MatIns = m_SceneManager->GetMaterialInstanceFromContent(m_Material[MatarialIndex]);
+		if (IsValid(MatIns))
+		{
+			m_procMesh->SetMaterial(MatarialIndex, MatIns);
+		}
+	}
+}
+
 void ALiterarumMesh::SetMeshBucket(TSharedPtr<FJsonObject> MeshBucketsJson)
 {
 	FMeshBucket InData;
 	FJsonObjectConverter::JsonObjectToUStruct(MeshBucketsJson.ToSharedRef(), &InData, 0, 0);
 	CheckMeshBucketSizes(InData.NumbBuckets);
 	m_MeshBuckets[InData.BucketIndex] = InData;
+	m_numMaterials = InData.MaterialCount;
+	m_IsMeshDirty = EDirtState::Dirty;
+}
 
+
+void ALiterarumMesh::SetMaterialInfo(TSharedPtr<FJsonObject> MaterialInfo)
+{
+	FMaterialInfo InData;
+	FJsonObjectConverter::JsonObjectToUStruct(MaterialInfo.ToSharedRef(), &InData, 0, 0);
+	m_Material = InData.MaterialNames;
+	UpdateMaterial();
 }
 
 void ALiterarumMesh::Finish()
@@ -292,51 +301,60 @@ void ALiterarumMesh::Finish()
 	ALiteratumActorBase::Finish();
 
 
-	//////////////////////////////////////////////////////////////////////////
-	///                         Materials
-	//////////////////////////////////////////////////////////////////////////
-
-
-
-
 	// get vert index length
-	int32 vertCount = 0;
+	//int32 vertCount = 0;
 	TArray<FVector> VertexPositions;
-	TArray<int32> Triangles;
 	TArray<FVector> normals;
 
 	int CurTriI = 0;
+	int NumMaterials = 0;
+	VertexPositions.Empty();
+	normals.Empty();
 
-	for (FMeshBucket& CurBucket : m_MeshBuckets)
+
+	TArray<TArray<int32>> Triangles;
+	Triangles.AddDefaulted(m_numMaterials);
+
+
+	for (const FMeshBucket& CurBucket : m_MeshBuckets)
 	{
 		int CurVertI = 0;
 		while (CurVertI < CurBucket.VertPositionsXYZ.Num())
 		{
-			VertexPositions.Add(FVector(CurBucket.VertPositionsXYZ[CurVertI], CurBucket.VertPositionsXYZ[CurVertI + 2] , CurBucket.VertPositionsXYZ[CurVertI + 1]));
-			normals.Add(FVector(CurBucket.VertNormalsXYZ[CurVertI], CurBucket.VertNormalsXYZ[CurVertI + 2], CurBucket.VertNormalsXYZ[CurVertI +1]));
+			VertexPositions.Add(FVector(CurBucket.VertPositionsXYZ[CurVertI], CurBucket.VertPositionsXYZ[CurVertI + 2], CurBucket.VertPositionsXYZ[CurVertI + 1]));
+			normals.Add(FVector(CurBucket.VertNormalsXYZ[CurVertI], CurBucket.VertNormalsXYZ[CurVertI + 2], CurBucket.VertNormalsXYZ[CurVertI + 1]));
 			CurVertI += 3;
 		}
 
-		for (int tri : CurBucket.TriIndices)
+		int TriBatchSize =0;
+		int CurrentMaterialIndex = -1;
+		for (int i = 0; i < CurBucket.TriIndices.Num(); i++)
 		{
-			Triangles.Add(tri + CurTriI);
+			TriBatchSize--;
+
+			if (TriBatchSize < 0)
+			{
+				TriBatchSize = CurBucket.TriIndices[i];
+				CurrentMaterialIndex++;
+			}
+			else
+			{
+				Triangles[CurrentMaterialIndex].Add(CurBucket.TriIndices[i]);
+			}
 		}
-		CurTriI += CurBucket.TriIndices.Num();
 	}
 
 
-	//////////////////////////////////////////////////////////////////////////
-	///                           Construct
-	//////////////////////////////////////////////////////////////////////////
+	
 
-	TArray<FVector2D> UV0;
-	TArray<FProcMeshTangent> tangents;
-	TArray<FLinearColor> vertexColors;
-	m_procMesh->CreateMeshSection_LinearColor(0, VertexPositions, Triangles, normals, UV0, vertexColors, tangents, false);
-
-	UMaterialInstance* MatIns = m_SceneManager->GetMaterialInstanceFromContent("Red");
-	if (IsValid(MatIns))
+	for (int MatarialIndex = 0; MatarialIndex < Triangles.Num(); MatarialIndex++)
 	{
-		m_procMesh->SetMaterial(0, MatIns);
+		const TArray<int32>& TriList = Triangles[MatarialIndex];
+
+		TArray<FVector2D> UV0;
+		TArray<FProcMeshTangent> tangents;
+		TArray<FLinearColor> vertexColors;
+		m_procMesh->CreateMeshSection_LinearColor(MatarialIndex, VertexPositions, TriList, normals, UV0, vertexColors, tangents, false);
 	}
+	UpdateMaterial();
 }

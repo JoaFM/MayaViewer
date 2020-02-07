@@ -22,158 +22,52 @@ void ULiteratumSceneManager::Setup(UCommandList* CommandList, UWorld* ParentWorl
 }
 
 
-void ULiteratumSceneManager::SetObjectMeta(TSharedPtr<FJsonObject> InputJsonObject)
-{
-	FMeshObjectMeta NewMeta;
-	FJsonObjectConverter::JsonObjectToUStruct(InputJsonObject.ToSharedRef(), &NewMeta, 0, 0);
-	NewMeta.Min = MayaToUE4SpacePosition(NewMeta.Min);
-	NewMeta.Max = MayaToUE4SpacePosition(NewMeta.Max);
 
-	if (m_SceneActors.Contains(NewMeta.ObjectName))
-	{
-		ALiterarumMesh* LiteratimMesh = (ALiterarumMesh*)m_SceneActors[NewMeta.ObjectName];
-		
-
-		if (IsValid(LiteratimMesh))
-		{
-			LiteratimMesh->SetMeshMeta(NewMeta);
-		}
-		else
-		{
-			UE_LOG(LogTemp, Error, TEXT("Can not set Meta, Object is not a mesh: %s"), *NewMeta.ObjectName);
-		}
-	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("Could Not Find Object To Set Meta On: %s"), *NewMeta.ObjectName);
-
-	}
-}
-
-void ULiteratumSceneManager::SetObjectWholeData(TSharedPtr<FJsonObject> InputJsonObject)
-{
-	FWholeMeshData NewMesh;
-	FJsonObjectConverter::JsonObjectToUStruct(InputJsonObject.ToSharedRef(), &NewMesh, 0, 0);
-	if (m_SceneActors.Contains(NewMesh.ObjectName))
-	{
-		ALiterarumMesh* LiteratimMesh = (ALiterarumMesh*)m_SceneActors[NewMesh.ObjectName];
-
-		for (int32 i = 0; i < NewMesh.VertexPositions.Num(); i++)
-		{
-			NewMesh.VertexPositions[i] = FVector(NewMesh.VertexPositions[i].X, NewMesh.VertexPositions[i].Z, NewMesh.VertexPositions[i].Y);
-		}
-
-		if (IsValid(LiteratimMesh))
-		{
-			LiteratimMesh->SetWholeMeshData(NewMesh);
-		}
-		else
-		{
-			UE_LOG(LogTemp, Error, TEXT("Can not set Data, Object is not a mesh: %s"), *NewMesh.ObjectName);
-		}
-	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("Could Not Find Object To Set Data On: %s"), *NewMesh.ObjectName);
-
-	}
-}
-
-
-
-void ULiteratumSceneManager::UpdateSceneDescription(TSharedPtr<FJsonObject> InputJsonObject)
-{
-	FSceneDescription NetScene;
-	FJsonObjectConverter::JsonObjectToUStruct(InputJsonObject.ToSharedRef(), &NetScene, 0, 0);
-	int32 objectsCreated = 0;
-	int32 objectsRemoved = 0;
-
-	TArray<FString> Keys;
-	NetScene.SceneObjects.GetKeys(Keys);
-	for (const FString& ObjName : Keys)
-	{
-		if (m_SceneActors.Contains(ObjName))
-		{
-			m_SceneActors[ObjName]->UpdateChangeHash(NetScene.SceneObjects[ObjName]);
-			continue;
-		}
-		else
-		{
-			ALiteratumActorBase* NewObj = m_ParentWorld->SpawnActor<ALiterarumMesh>(ALiterarumMesh::StaticClass(),FTransform::Identity);
-			NewObj->Setup(ObjName, this);
-			NewObj->OnConnect();
-			m_SceneActors.Add(ObjName, NewObj);
-			objectsCreated++;
-		}
-	}
-
-	m_SceneActors.GetKeys(Keys);
-	
-	// check for orphine objects
-	for (const FString& key : Keys)
-	{
-		if (!NetScene.SceneObjects.Contains(key))
-		{
-			m_SceneActors[key]->Destroy();
-			m_SceneActors.Remove(key);
-			objectsRemoved++;
-		}
-	}
-	if (objectsCreated || objectsRemoved)
-	{
-		UE_LOG(LogTemp, Error, TEXT("SceneDescription Updated Added(%d) removed(%d)"), objectsCreated, objectsRemoved);
-	}
-}
 
 void ULiteratumSceneManager::UpdateSceneObjectTransfrom(TSharedPtr<FJsonObject> InputJsonObject)
 {
 	
-	FUpdateObjectTransform NewObjectTransformDes;
-	FJsonObjectConverter::JsonObjectToUStruct(InputJsonObject.ToSharedRef(), &NewObjectTransformDes, 0, 0);
+	FUpdateObjectTransform NowTrans;
+	FJsonObjectConverter::JsonObjectToUStruct(InputJsonObject.ToSharedRef(), &NowTrans, 0, 0);
 
 
-	FVector Location = FVector(
-			NewObjectTransformDes.WorldMatrix[12],
-			NewObjectTransformDes.WorldMatrix[14],
-			NewObjectTransformDes.WorldMatrix[13]
-	);
+// 	FVector Location = FVector(
+// 			NowTrans.WorldMatrix[12],
+// 			NowTrans.WorldMatrix[14],
+// 			NowTrans.WorldMatrix[13]
+// 	);
 
 
 	FTransform NewTransform;
 
-	NewTransform.SetLocation(Location);
-	NewTransform.SetScale3D(NewObjectTransformDes.scale);
+	FMatrix mat(
+		FPlane(NowTrans.WorldMatrix[0], NowTrans.WorldMatrix[2], NowTrans.WorldMatrix[1], NowTrans.WorldMatrix[3]),
+		FPlane(NowTrans.WorldMatrix[8], NowTrans.WorldMatrix[10], NowTrans.WorldMatrix[9], NowTrans.WorldMatrix[11]),
+		FPlane(NowTrans.WorldMatrix[4], NowTrans.WorldMatrix[6], NowTrans.WorldMatrix[5], NowTrans.WorldMatrix[7]),
+		FPlane(NowTrans.WorldMatrix[12], NowTrans.WorldMatrix[14], NowTrans.WorldMatrix[13], NowTrans.WorldMatrix[15])
+	);
 
-	if (m_SceneActors.Contains(NewObjectTransformDes.objectName))
+	NewTransform.SetFromMatrix(mat);
+
+	FTransform compair;
+	compair.SetRotation(FQuat::MakeFromEuler(FVector(90, 0, 0)));
+
+	FMatrix compMat = compair.ToMatrixWithScale();
+
+		UE_LOG(LogTemp, Warning, TEXT("Rotation is %s"),
+			*NewTransform.GetRotation().Euler().ToString());
+
+	//FTransform NewTransform;
+
+	//NewTransform.SetLocation(Location);
+	//NewTransform.SetScale3D(FVector(NowTrans.scale.X, NowTrans.scale.Z, NowTrans.scale.Y));
+
+	if (m_SceneActors.Contains(NowTrans.objectName))
 	{
-		m_SceneActors[NewObjectTransformDes.objectName]->SetTransform(NewTransform);
+		m_SceneActors[NowTrans.objectName]->SetTransform(NewTransform);
 	}
 }
 
-
-void ULiteratumSceneManager::RequestObjectTransform(FString ObjectName)
-{
-	if (IsValid(m_CommandList))
-	{
-		m_CommandList->RequestObjectTransform(ObjectName);
-	}
-}
-
-void ULiteratumSceneManager::RequestObjectMeta(FString ObjectName)
-{
-	if (IsValid(m_CommandList))
-	{
-		m_CommandList->RequestObjectMeta(ObjectName);
-	}
-}
-
-void ULiteratumSceneManager::RequestObjectWholeData(FString ObjectName)
-{
-	if (IsValid(m_CommandList))
-	{
-		m_CommandList->RequestObjectWholeData(ObjectName);
-	}
-}
 
 UMaterialInstance* ULiteratumSceneManager::GetMaterialInstanceFromContent(FString materialName)
 {
@@ -204,6 +98,20 @@ void ULiteratumSceneManager::SetMeshDone(FString UpToDateObjectName)
 	else
 	{
 		UE_LOG(LogTemp, Error, TEXT("Could not finish object because it does not exist: %s"), *UpToDateObjectName);
+	}
+}
+
+void ULiteratumSceneManager::SetMaterialInfo(TSharedPtr<FJsonObject> MaterialsInfoJson)
+{
+
+	ALiterarumMesh* SceneActor =Cast<ALiterarumMesh>(GetSceneMeshActor(MaterialsInfoJson->GetStringField("ObjectName"), false));
+	if (IsValid(SceneActor))
+	{
+		SceneActor->SetMaterialInfo(MaterialsInfoJson);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Could not Set materials object because it does not exist: %s"), *MaterialsInfoJson->GetStringField("objectName"));
 	}
 }
 

@@ -6,8 +6,12 @@
 #include <maya/MGlobal.h>
 #include <maya/MPlug.h>
 #include <maya/MObjectHandle.h>
+#include <maya/MDagPath.h>
+#include <maya/MSelectionList.h>
+#include <maya/MMatrix.h>
 
 
+#include <string>
 #include <set>
 #include <vector>
 #include "LiteratimNetworking.h"
@@ -31,14 +35,15 @@ void LiteratimSceneManager::SetConnection(LiteratimNetworking* LitNetwork)
 void LiteratimSceneManager::Tick()
 {
 	UpdateSceneDescription();
-
+	SyncTransforms();
 	TickMeshQuery();
+	TickCamera();
 }
 
 
 void LiteratimSceneManager::TickMeshQuery()
 {
-	if (m_ActiveQuryHash)
+	if (m_ActiveQuryHash != "")
 	{
 		LiteratimMesh* LitMesh = m_SceneObjects[m_ActiveQuryHash];
 		if (!LitMesh->IsQuryDone())
@@ -66,7 +71,7 @@ void LiteratimSceneManager::ProgressToNextMesh()
 		}
 		else
 		{
-			m_ActiveQuryHash = 0;
+			m_ActiveQuryHash = "";
 		}
 	}
 	else
@@ -76,7 +81,7 @@ void LiteratimSceneManager::ProgressToNextMesh()
 	}
 }
 
-void LiteratimSceneManager::RemoveSceneObject(unsigned int ItemToRemove)
+void LiteratimSceneManager::RemoveSceneObject(std::string ItemToRemove)
 {
 	auto it = m_SceneObjects.find(ItemToRemove);
 
@@ -84,22 +89,85 @@ void LiteratimSceneManager::RemoveSceneObject(unsigned int ItemToRemove)
 	m_SceneObjects.erase(it);
 }
 
+void LiteratimSceneManager::TickCamera()
+{
+	MString nodeName("persp");
+	MObject nodeObj;
+	MSelectionList sList;
+	if (MGlobal::getSelectionListByName(nodeName, sList))
+	{
+		sList.getDependNode(0, nodeObj);
+	}
+	if (!nodeObj.isNull())
+	{
+		
+		MFnDagNode dagPath(nodeObj);
+		MDagPath thisDagNode;
+		dagPath.getPath(thisDagNode);
+		MMatrix worldPos = thisDagNode.inclusiveMatrix();
+
+		//TODO send this matric to ue4
+		std::vector<float> CameraMatrix;
+		float NewcameraHash = 0;
+		for (int row = 0; row < 4; row++)
+		{
+			for (int col = 0; col < 4; col++)
+			{
+				CameraMatrix.push_back((float)worldPos(row, col));
+				NewcameraHash += (float)worldPos(row, col);
+			}
+		}
+		if (m_cameraHash != NewcameraHash)
+		{
+			std::string sendCommand = "";
+			sendCommand += "{ \"Command\":\"SetCamera\",\"WorldMatrix\": [";
+			for (int i = 0; i < 16; i++)
+			{
+				sendCommand += std::to_string(CameraMatrix[i]);
+				if (i!=15) sendCommand += ",";
+			}
+			sendCommand += "]}";
+			if (m_LitNetwork->LitSendMessage(sendCommand, ResponceHeaders::Command))
+			{
+				m_cameraHash = NewcameraHash;
+			}
+
+		}
+	}
+}
+
+void LiteratimSceneManager::SyncTransforms()
+{
+	for (const std::pair<std::string, LiteratimMesh*>& SceneMesh : m_SceneObjects)
+	{
+		if (SceneMesh.second->QueryTransform(m_LitNetwork))
+		{
+			return;
+		}
+	}
+}
+
 void LiteratimSceneManager::UpdateSceneDescription()
 {
 	
 	MItDependencyNodes it(MFn::Type::kMesh);
 
-	std::set<unsigned int> ActiveObjects;
+	std::set<std::string> ActiveObjects;
 
 	// Add new objects
 	while (!it.isDone())
 	{
 		// get the object the iterator is referencing
 		MObject obj = it.item();
-		MFnMesh ms(obj);
-		//MString path = ms.fullPathName();
+		// Make sure it the prim shape not an intermediate
+		MStatus rs;
+		MDagPath dp = MDagPath::getAPathTo(obj, &rs);
+		MDagPath tdp = MDagPath::getAPathTo(dp.transform(), &rs);
+		tdp.extendToShape();
+		obj = tdp.node();
+
+		std::string HashCode = LiteratimMesh::GetHashFromMObject(obj);
 		MObjectHandle OH(obj);
-		unsigned int HashCode = OH.hashCode();
 		ActiveObjects.insert(HashCode);
 		if (m_SceneObjects.count(HashCode))
 		{
@@ -113,16 +181,15 @@ void LiteratimSceneManager::UpdateSceneDescription()
 		it.next();
 	}
 
-
 	// remove deleted objects
 	{
 		// get all keys
-		std::vector<unsigned int> vints;
+		std::vector<std::string> vints;
 		vints.reserve(m_SceneObjects.size());
 		for (auto const& imap : m_SceneObjects)
 			vints.push_back(imap.first);
 		//cross compare keys
-		for (unsigned int itemHash : vints)
+		for (std::string itemHash : vints)
 		{
 			if (!ActiveObjects.count(itemHash) || (!m_SceneObjects[itemHash]->IsValid()))
 			{
@@ -130,7 +197,6 @@ void LiteratimSceneManager::UpdateSceneDescription()
 			}
 		}
 	}
-
 }
 
 bool LiteratimSceneManager::AddSceneMesh(MObjectHandle ObjectHandle)
@@ -141,7 +207,7 @@ bool LiteratimSceneManager::AddSceneMesh(MObjectHandle ObjectHandle)
 	}
 
 	LiteratimMesh*  LMesh = new LiteratimMesh(ObjectHandle);
-	m_SceneObjects.insert_or_assign(ObjectHandle.hashCode(), LMesh);
+	m_SceneObjects.insert_or_assign(LMesh->GetHash(), LMesh);
 
 	MGlobal::displayInfo(MString("Added mesh") );
 
@@ -152,7 +218,7 @@ bool LiteratimSceneManager::AddSceneMesh(MObjectHandle ObjectHandle)
 	return true;
 }
 
-void LiteratimSceneManager::RemoveSceneMesh(unsigned int itemToRemove)
+void LiteratimSceneManager::RemoveSceneMesh(std::string itemToRemove)
 {
 	auto& it = m_SceneObjects.find(itemToRemove);
 
@@ -170,7 +236,7 @@ void LiteratimSceneManager::RemoveSceneMesh(unsigned int itemToRemove)
 			}
 			else
 			{
-				m_ActiveQuryHash = 0;
+				m_ActiveQuryHash = "";
 			}
 		}
 	}

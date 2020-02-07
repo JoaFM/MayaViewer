@@ -12,20 +12,11 @@ void UCommandList::UpdateActions()
 	if (Actions.Num() == 0)
 	{
 		Actions.Add("SetCamera", &UCommandList::SetCamera);
-		Actions.Add("SetSceneDescription", &UCommandList::SetSceneDescription);
 		Actions.Add("SetObjectTransform", &UCommandList::SetObjectTransform);
-		Actions.Add("SetObjectMeta", &UCommandList::SetObjectMeta);
-		Actions.Add("SetObjectWholeData", &UCommandList::SetObjectWholeData);
 		Actions.Add("WhatTypeAreYou", &UCommandList::WhatTypeAreYou);
-		Actions.Add("SetMeshBucketVerts", &UCommandList::SetMeshBucketVerts);
-		Actions.Add("SetMeshBucketTris", &UCommandList::SetMeshBucketTris);
 		Actions.Add("MeshDone", &UCommandList::SetMeshDone);
-
 		Actions.Add("SetMeshBucket", &UCommandList::SetMeshBucket);
-
-		
-		
-
+		Actions.Add("SetMaterialNames", &UCommandList::SetMaterialNames);
 		
 	}
 }
@@ -99,24 +90,6 @@ void UCommandList::SetCamera(TSharedPtr<FJsonObject> InputString)
 	m_ViewerScene->SetCamera(SetCammeraInfo);
 ;}
 
-void UCommandList::SetObjectMeta(TSharedPtr<FJsonObject> InputString)
-{
-	m_ViewerScene->SetObjectMeta(InputString);
-}
-
-
-
-void UCommandList::SetObjectWholeData(TSharedPtr<FJsonObject> InputString)
-{
-	m_ViewerScene->SetObjectWholeData(InputString);
-
-}
-
-void UCommandList::SetSceneDescription(TSharedPtr<FJsonObject> InputString)
-{
-	m_ViewerScene->UpdateSceneDescription(InputString);
-}
-
 
 void UCommandList::SetObjectTransform(TSharedPtr<FJsonObject> InputString)
 {
@@ -131,17 +104,6 @@ void UCommandList::WhatTypeAreYou(TSharedPtr<FJsonObject> InputString)
 
 }
 
-void UCommandList::SetMeshBucketVerts(TSharedPtr<FJsonObject> MeshVertBucketsJson)
-{
-	m_ViewerScene->SetMeshBucketVerts(MeshVertBucketsJson);
-}
-
-void UCommandList::SetMeshBucketTris(TSharedPtr<FJsonObject> MeshTriBucketsJson)
-{
-	m_ViewerScene->SetMeshBucketTris(MeshTriBucketsJson);
-}
-
-
 void UCommandList::SetMeshDone(TSharedPtr<FJsonObject> commandJsonO)
 {
 	m_ViewerScene->SetMeshDone(commandJsonO->GetStringField("objectName"));
@@ -150,6 +112,11 @@ void UCommandList::SetMeshDone(TSharedPtr<FJsonObject> commandJsonO)
 void UCommandList::SetMeshBucket(TSharedPtr<FJsonObject> MeshBucketsJson)
 {
 	m_ViewerScene->SetMeshBucket(MeshBucketsJson);
+}
+
+void UCommandList::SetMaterialNames(TSharedPtr<FJsonObject> MaterialsInfoJson)
+{
+	m_ViewerScene->SetMaterialInfo(MaterialsInfoJson);
 }
 
 // --------------------  Out going Commands 

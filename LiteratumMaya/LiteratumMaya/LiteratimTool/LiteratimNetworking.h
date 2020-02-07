@@ -50,6 +50,8 @@ public:
 	
 	bool m_connected = false;
 
+	bool IsConnected()const { return m_connected; };
+
 private:
 	char m_buf[4096];
 	BufferStack m_CurrentDataStream;
