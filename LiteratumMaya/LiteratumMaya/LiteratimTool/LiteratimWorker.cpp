@@ -4,18 +4,24 @@
 
 LiteratimWorker::LiteratimWorker() 
 {
-	m_WorkerThread = std::thread(&LiteratimWorker::TickThread, this);
 }
 
 LiteratimWorker::~LiteratimWorker()
 {
-	m_PendingKill = true;
-	m_WorkerThread.join();
+
 }
 
-void LiteratimWorker::SetConnection(LiteratimNetworking* LitNetwork)
+void LiteratimWorker::Start(LiteratimNetworking* LitNetwork)
 {
 	m_LitNetwork = LitNetwork;
+	m_WorkerThread = std::thread(&LiteratimWorker::TickThread, this); 
+
+}
+
+void LiteratimWorker::Stop()
+{
+	m_PendingKill = true;
+	m_WorkerThread.join();
 }
 
 bool LiteratimWorker::IsReadForNextMesh() const

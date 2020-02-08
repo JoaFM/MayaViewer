@@ -17,8 +17,8 @@ public:
 	LiteratimWorker();
 	~LiteratimWorker();
 	
-	void SetConnection(LiteratimNetworking* LitNetwork);
-
+	void Start(LiteratimNetworking* LitNetwork);
+	void Stop();
 	bool IsReadForNextMesh() const;
 	void QueryThisMesh(LiteratimMesh* LitMesh);
 	void SendDeferredCommand(std::string& sendCommand);

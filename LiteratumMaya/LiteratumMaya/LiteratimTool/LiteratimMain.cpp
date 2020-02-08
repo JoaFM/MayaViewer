@@ -4,13 +4,13 @@
 void LiteratimMain::Start()
 {
 	LitNetwork.Connect(&SceneManager);
-	SceneManager.SetConnection(&LitNetwork);
+	SceneManager.Start(&LitNetwork);
 }
 
 void LiteratimMain::Stop()
 {
 	LitNetwork.Disconnect();
-	SceneManager.SetConnection(nullptr);
+	SceneManager.Stop();
 }
 
 void LiteratimMain::Tick()

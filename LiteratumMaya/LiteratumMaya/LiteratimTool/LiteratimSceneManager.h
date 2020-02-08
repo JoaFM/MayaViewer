@@ -17,9 +17,10 @@ public:
 	~LiteratimSceneManager();
 
 	void Tick();
-	void SetConnection(LiteratimNetworking* LitNetwork);
+	void Start(LiteratimNetworking* LitNetwork);
 
 	void DirtyAll();
+	void Stop();
 public:
 	std::map<std::string, LiteratimMesh*> m_SceneObjects;
 

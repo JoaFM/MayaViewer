@@ -26,10 +26,10 @@ LiteratimSceneManager::~LiteratimSceneManager()
 {
 }
 
-void LiteratimSceneManager::SetConnection(LiteratimNetworking* LitNetwork)
+void LiteratimSceneManager::Start(LiteratimNetworking* LitNetwork)
 {
 	m_LitNetwork = LitNetwork;
-	m_Worker.SetConnection(m_LitNetwork);
+	m_Worker.Start(m_LitNetwork);
 }
 
 
@@ -43,8 +43,17 @@ void LiteratimSceneManager::DirtyAll()
 	m_SceneObjects.clear();
 }
 
+void LiteratimSceneManager::Stop()
+{
+	m_Worker.Stop();
+	m_LitNetwork = nullptr;
+	m_SceneObjects.clear();
+}
+
 void LiteratimSceneManager::Tick()
 {
+	if (!m_LitNetwork) return;
+
 	UpdateSceneDescription();
 	SyncTransforms();
 	TickMeshQuery();
@@ -60,19 +69,6 @@ void LiteratimSceneManager::TickMeshQuery()
 		{
 			ProgressToNextMesh();
 		}
-
-
-		/*
-		LiteratimMesh* LitMesh = m_SceneObjects[m_ActiveQuryHash];
-		if (!LitMesh->IsQuryDone())
-		{
-			LitMesh->RunQuery(m_LitNetwork);
-		}
-		else
-		{
-			ProgressToNextMesh();
-		}
-		*/
 	}
 }
 
