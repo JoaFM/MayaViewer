@@ -32,6 +32,16 @@ void LiteratimSceneManager::SetConnection(LiteratimNetworking* LitNetwork)
 }
 
 
+void LiteratimSceneManager::DirtyAll()
+{
+	for (std::pair<std::string, LiteratimMesh*> LitMesh : m_SceneObjects)
+	{
+		LitMesh.second->Dirty();
+
+	}
+	m_SceneObjects.clear();
+}
+
 void LiteratimSceneManager::Tick()
 {
 	UpdateSceneDescription();
@@ -85,6 +95,7 @@ void LiteratimSceneManager::RemoveSceneObject(std::string ItemToRemove)
 {
 	auto it = m_SceneObjects.find(ItemToRemove);
 
+	it->second->SendDeleteMe(m_LitNetwork);
 	it->second = nullptr;
 	m_SceneObjects.erase(it);
 }
@@ -209,11 +220,13 @@ bool LiteratimSceneManager::AddSceneMesh(MObjectHandle ObjectHandle)
 	LiteratimMesh*  LMesh = new LiteratimMesh(ObjectHandle);
 	m_SceneObjects.insert_or_assign(LMesh->GetHash(), LMesh);
 
-	MGlobal::displayInfo(MString("Added mesh") );
+
+	LMesh->SendCreateMe(m_LitNetwork);
 
 	m_CurrUpdatemeshIterator = m_SceneObjects.begin();
 	m_ActiveQuryHash = m_CurrUpdatemeshIterator->first;
 	m_CurrUpdatemeshIterator->second->StartQuery();
+
 	//#TODO: Send make new object
 	return true;
 }

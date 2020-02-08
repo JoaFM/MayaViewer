@@ -32,6 +32,7 @@ public:
 	void RequestObjectTransform(FString ObjectName);
 	void RequestObjectMeta(FString ObjectName);
 	void RequestObjectWholeData(FString ObjectName);
+	void DirtyContent();
 
 private:
 	void UpdateActions();
@@ -44,6 +45,8 @@ private:
 	void SetMeshDone(TSharedPtr<FJsonObject> commandJsonO);
 	void SetMeshBucket(TSharedPtr<FJsonObject> MeshBucketsJson);
 	void SetMaterialNames(TSharedPtr<FJsonObject> MaterialsInfoJson);
+	void CreateMesh(TSharedPtr<FJsonObject> InputString);
+	void DeleteMesh(TSharedPtr<FJsonObject> InputString);
 
 private:
 

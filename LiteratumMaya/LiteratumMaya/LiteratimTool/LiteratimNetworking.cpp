@@ -7,6 +7,7 @@
 #include <iostream>
 #include <string>
 
+#include "LiteratimTool/LiteratimSceneManager.h"
 
 #include "External/json.hpp"
 
@@ -21,8 +22,9 @@ LiteratimNetworking::~LiteratimNetworking()
 
 }
 
-bool LiteratimNetworking::Connect()
+bool LiteratimNetworking::Connect(LiteratimSceneManager* SceneManager)
 {
+	m_SceneManager = SceneManager;
 	m_connected = true;
 
 	std::string ipAddress = "127.0.0.1";			// IP Address of the server
@@ -65,15 +67,16 @@ bool LiteratimNetworking::Connect()
 		WSACleanup();
 		return false;
 	}
-
-	// set not blocking
-	unsigned long NonBlocking = 1;
-	int result = ioctlsocket(m_ServerSocket, FIONBIO, &NonBlocking);
-	if (result == SOCKET_ERROR)
 	{
-		int error = WSAGetLastError();
-		m_connected = false;
-		return false;
+		// set not blocking
+		unsigned long NonBlocking = 1;
+		int result = ioctlsocket(m_ServerSocket, FIONBIO, &NonBlocking);
+		if (result == SOCKET_ERROR)
+		{
+			int error = WSAGetLastError();
+			m_connected = false;
+			return false;
+		}
 	}
 	return true;
 }
@@ -170,14 +173,25 @@ void LiteratimNetworking::ProcessIncomingData()
 void LiteratimNetworking::ProcessIncommingCommand(json::JSON* obj)
 {
 
-	std::string CommandStr = obj->ToString();
-	MGlobal::displayError(MString("Ignored Command"));
-	MGlobal::displayError(MString("CommandStr"));
 
+	std::string CommandStr = obj->ToString();
+	json::JSON jobj = *obj;
+	if (jobj["Command"].ToString() == std::string("DirtyContent"))
+	{
+		m_SceneManager->DirtyAll();
+	}
+	else
+	{
+		std::string CommandStr = obj->ToString();
+		MGlobal::displayError(MString("Ignored Command"));
+		MGlobal::displayError(MString("CommandStr"));
+	}
 }
 
 bool LiteratimNetworking::LitSendMessage(std::string message, ResponceHeaders CommandType)
 {
+	MGlobal::displayInfo(message.c_str());
+
 	bool SendOK = true;
 	SendHeader head((int)(CommandType), (int)message.size());
 	SendOK = SendOK && LitSendBytes((char*)(&head), sizeof(head));

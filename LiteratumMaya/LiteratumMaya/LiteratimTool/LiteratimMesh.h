@@ -51,8 +51,13 @@ public:
 	void RunQuery(LiteratimNetworking* LitNetWork);
 	bool QueryTransform(LiteratimNetworking* LitNetWork);
 	static std::string GetHashFromMObject(const  MObject& Obj) ;
-
+	void Dirty();
 	std::string GetHash();
+
+	// Out Commands
+	void SendCreateMe(LiteratimNetworking* LitNetWork);
+	void SendDeleteMe(LiteratimNetworking* LitNetWork);
+
 private:
 	MObjectHandle m_ObjHandle;
 	bool IsBeingQueried = false;
@@ -84,6 +89,9 @@ private:
 	bool m_MeshWasEdited = false;
 	unsigned int m_indexList = 0;
 
+	/* Cash this so when the mesh gets deleted 
+	the wrapper object still knows the hash*/
+	std::string m_Hash = "";
 
 	void SendMeshUpdate(SendBucket& sendBucket, int BucketIndex, LiteratimNetworking* LitNetWork);
 	void CheckForIsClean(LiteratimNetworking* LitNetWork);

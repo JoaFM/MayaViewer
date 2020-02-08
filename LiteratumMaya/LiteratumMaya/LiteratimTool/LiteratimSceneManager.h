@@ -18,6 +18,7 @@ public:
 	void Tick();
 	void SetConnection(LiteratimNetworking* LitNetwork);
 
+	void DirtyAll();
 public:
 	std::map<std::string, LiteratimMesh*> m_SceneObjects;
 

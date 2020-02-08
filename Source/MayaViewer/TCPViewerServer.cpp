@@ -42,11 +42,6 @@ ULiteratumSceneManager* ALiteratiumServer::GetViewerScene()
 	return m_viewerScene;
 }
 
-void ALiteratiumServer::Test()
-{
-
-}
-
 
 void ALiteratiumServer::ConnectToServer()
 {
@@ -61,35 +56,16 @@ void ALiteratiumServer::ConnectToServer()
 
 	bool connected = SocketToServer->Connect(*addr);
 
+	
+
 	GEngine->AddOnScreenDebugMessage(1, 5.f, FColor::Red, TEXT("ConnectToServer"));
-
-	//FMeshObjectMeta _Test;
-	//_Test.Min = FVector::OneVector;
-	//_Test.Max = -FVector::OneVector;
-	//FString TestText;
-	//FJsonObjectConverter::UStructToJsonObjectString(_Test, TestText);
-	//GEngine->AddOnScreenDebugMessage(1, 5.f, FColor::Red, TEXT("ConnectToServer"));
-
-
-
-// 	TArray<FString> Filenames;
-// 	FPackageName::FindPackagesInDirectory(Filenames, FPaths::ProjectContentDir());
-// 
-// 	TArray<FString> assetReferences;
-// 	for (TArray<FString>::TConstIterator FileItem(Filenames); FileItem; ++FileItem)
-// 	{
-// 		assetReferences.Add(FPackageName::FilenameToLongPackageName(*FileItem) + TEXT(".") + FPaths::GetBaseFilename(*FileItem));
-// 	}
-// 
-// 	for (FString path : assetReferences)
-// 	{
-// 		UMaterialInstance* test = LoadObject<UMaterialInstance>(nullptr, *path, *path);
-// 		UE_LOG(LogTemp, Error, TEXT("Files found: %s"), *path);
-// 	}
-
-
 }
 
+
+void ALiteratiumServer::DirtyAll()
+{
+	m_CommandList->DirtyContent();
+}
 
 void ALiteratiumServer::DissconectToServer()
 {
@@ -111,9 +87,14 @@ void ALiteratiumServer::DissconectToServer()
 	}
 }
 
+bool ALiteratiumServer::IsConnected()
+{
+	if (!SocketToServer) return false;
+	return true;
+}
+
 void ALiteratiumServer::SendTextMessage(FString TextToSend, ResponceHeaders ResponceType)
 {
-	if (!SocketToServer) return;
 	if (TextToSend.IsEmpty())
 	{
 		UE_LOG(LogTemp, Error, TEXT("No text"));

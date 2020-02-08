@@ -89,6 +89,8 @@ public:
 
 	void SetMeshDone(FString UpToDateObjectName);
 	void SetMaterialInfo(TSharedPtr<FJsonObject> MaterialsInfoJson);
+	void CreateMesh(TSharedPtr<FJsonObject> InputString);
+	void DeleteMesh(TSharedPtr<FJsonObject> InputString);
 public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
@@ -97,7 +99,7 @@ public:
 private:
 	friend class UCommandList;
 	void SetCamera(FNetCameraInfo NewCamerainfo) { m_CameraInfo = NewCamerainfo; }
-	ALiteratumActorBase* GetSceneMeshActor(FString ActorName, bool CreateNew);
+	ALiteratumActorBase* GetSceneMeshActor(FString ActorName);
 
 
 	UPROPERTY()

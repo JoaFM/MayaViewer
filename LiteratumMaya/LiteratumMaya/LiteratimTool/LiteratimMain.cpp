@@ -3,7 +3,7 @@
 
 void LiteratimMain::Start()
 {
-	LitNetwork.Connect();
+	LitNetwork.Connect(&SceneManager);
 	SceneManager.SetConnection(&LitNetwork);
 }
 

@@ -5,6 +5,7 @@
 #include "BufferStack.h"
 
 
+class LiteratimSceneManager;
 
 
 enum class CurrentState {
@@ -39,7 +40,7 @@ class LiteratimNetworking
 public:
 	LiteratimNetworking();
 	~LiteratimNetworking();
-	bool Connect();
+	bool Connect(LiteratimSceneManager* SceneManager);
 	bool Disconnect();
 
 
@@ -70,5 +71,6 @@ private:
 
 	void ProcessIncommingCommand(json::JSON* obj);
 	bool LitSendBytes(const char* DataToSend, int DataSize);
+	LiteratimSceneManager* m_SceneManager;
 };
 

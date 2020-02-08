@@ -31,13 +31,6 @@ void ULiteratumSceneManager::UpdateSceneObjectTransfrom(TSharedPtr<FJsonObject> 
 	FJsonObjectConverter::JsonObjectToUStruct(InputJsonObject.ToSharedRef(), &NowTrans, 0, 0);
 
 
-// 	FVector Location = FVector(
-// 			NowTrans.WorldMatrix[12],
-// 			NowTrans.WorldMatrix[14],
-// 			NowTrans.WorldMatrix[13]
-// 	);
-
-
 	FTransform NewTransform;
 
 	FMatrix mat(
@@ -49,18 +42,6 @@ void ULiteratumSceneManager::UpdateSceneObjectTransfrom(TSharedPtr<FJsonObject> 
 
 	NewTransform.SetFromMatrix(mat);
 
-	FTransform compair;
-	compair.SetRotation(FQuat::MakeFromEuler(FVector(90, 0, 0)));
-
-	FMatrix compMat = compair.ToMatrixWithScale();
-
-		UE_LOG(LogTemp, Warning, TEXT("Rotation is %s"),
-			*NewTransform.GetRotation().Euler().ToString());
-
-	//FTransform NewTransform;
-
-	//NewTransform.SetLocation(Location);
-	//NewTransform.SetScale3D(FVector(NowTrans.scale.X, NowTrans.scale.Z, NowTrans.scale.Y));
 
 	if (m_SceneActors.Contains(NowTrans.objectName))
 	{
@@ -90,7 +71,7 @@ UMaterial* ULiteratumSceneManager::GetMaterialFromContent(FString materialName)
 
 void ULiteratumSceneManager::SetMeshDone(FString UpToDateObjectName)
 {
-	ALiteratumActorBase* SceneActor = GetSceneMeshActor(UpToDateObjectName, false);
+	ALiteratumActorBase* SceneActor = GetSceneMeshActor(UpToDateObjectName);
 	if (IsValid(SceneActor))
 	{
 		SceneActor->Finish();
@@ -104,7 +85,7 @@ void ULiteratumSceneManager::SetMeshDone(FString UpToDateObjectName)
 void ULiteratumSceneManager::SetMaterialInfo(TSharedPtr<FJsonObject> MaterialsInfoJson)
 {
 
-	ALiterarumMesh* SceneActor =Cast<ALiterarumMesh>(GetSceneMeshActor(MaterialsInfoJson->GetStringField("ObjectName"), false));
+	ALiterarumMesh* SceneActor =Cast<ALiterarumMesh>(GetSceneMeshActor(MaterialsInfoJson->GetStringField("ObjectName")));
 	if (IsValid(SceneActor))
 	{
 		SceneActor->SetMaterialInfo(MaterialsInfoJson);
@@ -112,6 +93,27 @@ void ULiteratumSceneManager::SetMaterialInfo(TSharedPtr<FJsonObject> MaterialsIn
 	else
 	{
 		UE_LOG(LogTemp, Error, TEXT("Could not Set materials object because it does not exist: %s"), *MaterialsInfoJson->GetStringField("objectName"));
+	}
+}
+
+void ULiteratumSceneManager::CreateMesh(TSharedPtr<FJsonObject> InputString)
+{
+	FString ActorName = InputString->GetStringField("ObjectName");
+	ALiteratumActorBase* NewObj = m_ParentWorld->SpawnActor<ALiterarumMesh>(ALiterarumMesh::StaticClass(), FTransform::Identity);
+	NewObj->Setup(ActorName, this);
+	NewObj->OnConnect();
+	m_SceneActors.Add(ActorName, NewObj);
+	UE_LOG(LogTemp, Warning, TEXT("Created Mesh actor Object: %s"), *ActorName);
+}
+
+void ULiteratumSceneManager::DeleteMesh(TSharedPtr<FJsonObject> InputString)
+{
+	ALiteratumActorBase* ActorToDelete = GetSceneMeshActor(InputString->GetStringField("ObjectName"));
+
+	if (IsValid(ActorToDelete))
+	{
+		m_SceneActors.Remove(InputString->GetStringField("ObjectName"));
+		ActorToDelete->Destroy();
 	}
 }
 
@@ -147,21 +149,13 @@ void ULiteratumSceneManager::UpdateSceneMaterialLibrary()
 
 
 
-ALiteratumActorBase*  ULiteratumSceneManager::GetSceneMeshActor(FString ActorName, bool CreateNew)
+ALiteratumActorBase*  ULiteratumSceneManager::GetSceneMeshActor(FString ActorName)
 {
 	if (m_SceneActors.Contains(ActorName))
 	{
 		return m_SceneActors[ActorName];
 	}
-	else if (CreateNew)
-	{
-		ALiteratumActorBase* NewObj = m_ParentWorld->SpawnActor<ALiterarumMesh>(ALiterarumMesh::StaticClass(), FTransform::Identity);
-		NewObj->Setup(ActorName, this);
-		NewObj->OnConnect();
-		m_SceneActors.Add(ActorName, NewObj);
-		UE_LOG(LogTemp, Warning, TEXT("Created Mesh actor Object: %s"), *ActorName);
-		return NewObj;
-	}
+
 	return nullptr;
 }
 
@@ -169,7 +163,7 @@ ALiteratumActorBase*  ULiteratumSceneManager::GetSceneMeshActor(FString ActorNam
 void ULiteratumSceneManager::SetMeshBucketVerts(TSharedPtr<FJsonObject> MeshVertBucketsJson)
 {
 	FString objname = MeshVertBucketsJson->GetStringField("objectName");
-	ALiteratumActorBase* SceneActor = GetSceneMeshActor(objname, true);
+	ALiteratumActorBase* SceneActor = GetSceneMeshActor(objname);
 		
 
 	if (!IsValid(SceneActor))
@@ -192,7 +186,7 @@ void ULiteratumSceneManager::SetMeshBucketVerts(TSharedPtr<FJsonObject> MeshVert
 void ULiteratumSceneManager::SetMeshBucketTris(TSharedPtr<FJsonObject> MeshVertBucketsJson)
 {
 	FString objname = MeshVertBucketsJson->GetStringField("objectName");
-	ALiteratumActorBase* SceneActor = GetSceneMeshActor(objname, true);
+	ALiteratumActorBase* SceneActor = GetSceneMeshActor(objname);
 	if (!IsValid(SceneActor))
 	{
 		UE_LOG(LogTemp, Error, TEXT("Error Creating object %s"), *objname);
@@ -213,7 +207,7 @@ void ULiteratumSceneManager::SetMeshBucketTris(TSharedPtr<FJsonObject> MeshVertB
 void ULiteratumSceneManager::SetMeshBucket(TSharedPtr<FJsonObject> MeshBucketsJson)
 {
 	FString ObjectName = MeshBucketsJson->GetStringField("ObjectName");
-	ALiteratumActorBase* SceneActor = GetSceneMeshActor(ObjectName, true);
+	ALiteratumActorBase* SceneActor = GetSceneMeshActor(ObjectName);
 
 
 	ALiterarumMesh* SceneMeshActor = Cast<ALiterarumMesh>(SceneActor);

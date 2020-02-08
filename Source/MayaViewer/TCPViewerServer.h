@@ -54,22 +54,18 @@ public:
 		 ULiteratumSceneManager* GetViewerScene();
 
 	UFUNCTION(BlueprintCallable)
-		void Test();
+		void ConnectToServer();
 
 	UFUNCTION(BlueprintCallable)
-	void ConnectToServer();
+		void DirtyAll();
 
 	UFUNCTION(BlueprintCallable)
-	void DissconectToServer();
+		void DissconectToServer();
 
-		void SendTextMessage(FString TextToSend, ResponceHeaders ResponceType);
+	UFUNCTION(BlueprintCallable)
+		bool IsConnected();
 
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-		FVector GetCamPos() {return m_ActiveCameraPosition;};
-
-	void SendResponceHeader(ResponceHeaders ResponceType, int32 ResponceSize);
-
-	bool RecvSocketData(FSocket *Socket, uint32 DataSize, FString& Msg);
+	void SendTextMessage(FString TextToSend, ResponceHeaders ResponceType);
 
 public:
 	virtual void BeginDestroy() override;
@@ -94,7 +90,6 @@ private:
 	//Package Sizes
 	ResponceHeaders m_PackageResponceType;
 	int m_PackageResponceSize;
-	FVector m_ActiveCameraPosition;
 
 	//Debug Info
 	float m_downloadAmount = 0;
@@ -108,4 +103,8 @@ private:
 	void LoadObjects();
 
 	void CloseConnection(bool CloseBecauseofError);
+
+	void SendResponceHeader(ResponceHeaders ResponceType, int32 ResponceSize);
+
+	bool RecvSocketData(FSocket *Socket, uint32 DataSize, FString& Msg);
 };

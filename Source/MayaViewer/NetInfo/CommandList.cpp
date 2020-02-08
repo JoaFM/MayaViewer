@@ -17,6 +17,8 @@ void UCommandList::UpdateActions()
 		Actions.Add("MeshDone", &UCommandList::SetMeshDone);
 		Actions.Add("SetMeshBucket", &UCommandList::SetMeshBucket);
 		Actions.Add("SetMaterialNames", &UCommandList::SetMaterialNames);
+		Actions.Add("CreateMesh", &UCommandList::CreateMesh);
+		Actions.Add("DeleteMesh", &UCommandList::DeleteMesh);
 		
 	}
 }
@@ -27,8 +29,11 @@ void UCommandList::HandleCommand(TSharedPtr<FJsonObject> JsonObject)
 	UpdateActions();
 	FString j_Command = JsonObject->GetStringField("Command");
 
+
 	if (Actions.Contains(j_Command))
 	{
+		UE_LOG(LogTemp, Log, TEXT("Processing command %s"), *j_Command);
+
 		(this->* (Actions[j_Command]))(JsonObject);
 	}
 	else
@@ -43,6 +48,8 @@ void UCommandList::Setup(ULiteratumSceneManager* NewViewerScene, ALiteratiumServ
 	m_ViewerScene = NewViewerScene;
 	m_Server = server ;
 }
+
+
 
 FVector UCommandList::ConvertLeftHandToUE4VtoV(FVector LefthandedVector) 
 {
@@ -101,6 +108,10 @@ void UCommandList::WhatTypeAreYou(TSharedPtr<FJsonObject> InputString)
 {
 	if (!IsValid(m_Server)) return;
 	m_Server->SendTextMessage("UE4", ALiteratiumServer::ResponceHeaders::ServerCommand);
+	if (m_Server->IsConnected())
+	{
+		DirtyContent();
+	}
 
 }
 
@@ -117,6 +128,16 @@ void UCommandList::SetMeshBucket(TSharedPtr<FJsonObject> MeshBucketsJson)
 void UCommandList::SetMaterialNames(TSharedPtr<FJsonObject> MaterialsInfoJson)
 {
 	m_ViewerScene->SetMaterialInfo(MaterialsInfoJson);
+}
+
+void UCommandList::CreateMesh(TSharedPtr<FJsonObject> InputString)
+{
+	m_ViewerScene->CreateMesh(InputString);
+}
+
+void UCommandList::DeleteMesh(TSharedPtr<FJsonObject> InputString)
+{
+	m_ViewerScene->DeleteMesh(InputString);
 }
 
 // --------------------  Out going Commands 
@@ -143,5 +164,11 @@ void UCommandList::RequestObjectWholeData(FString ObjectName)
 {
 	if (!IsValid(m_Server)) return;
 	m_Server->SendTextMessage("{\"Command\": \"GetObjectWholeData\", \"ObjectName\": \"" + ObjectName + "\"}", ALiteratiumServer::ResponceHeaders::Command);
+
+}
+
+void UCommandList::DirtyContent()
+{
+	m_Server->SendTextMessage("{\"Command\": \"DirtyContent\"}", ALiteratiumServer::ResponceHeaders::Command);
 
 }

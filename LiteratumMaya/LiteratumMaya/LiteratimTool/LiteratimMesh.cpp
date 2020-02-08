@@ -163,14 +163,42 @@ std::string LiteratimMesh::GetHashFromMObject(const  MObject& Obj)
 	return ts;
 }
 
+void LiteratimMesh::Dirty()
+{
+	DirtyAllBuckets();
+	m_MaterialsDirty = true;
+	m_TransformHash = -1;
+}
+
 std::string LiteratimMesh::GetHash() 
 {
+	if (m_Hash == "")
+	{
+		MFnDependencyNode DG(m_ObjHandle.object());
+		int len = 0;
+		const char* rv = DG.uuid().asString().asChar(len);
+		m_Hash = std::string(rv);
+	}
 
-	MFnDependencyNode DG(m_ObjHandle.object());
-	int len = 0;
-	const char* rv = DG.uuid().asString().asChar(len);
-	std::string ts(rv);
-	return ts;
+	return m_Hash;
+}
+
+void LiteratimMesh::SendCreateMe(LiteratimNetworking* LitNetWork)
+{
+	json::JSON obj;
+	obj["Command"] = "CreateMesh";
+	obj["ObjectName"] = GetHash();
+	std::string MessageJsonString = obj.dump(0, "");
+	LitNetWork->LitSendMessage(MessageJsonString, ResponceHeaders::Command);
+}
+
+void LiteratimMesh::SendDeleteMe(LiteratimNetworking* LitNetWork)
+{
+	json::JSON obj;
+	obj["Command"] = "DeleteMesh";
+	obj["ObjectName"] = GetHash();
+	std::string MessageJsonString = obj.dump(0, "");
+	LitNetWork->LitSendMessage(MessageJsonString, ResponceHeaders::Command);
 }
 
 void LiteratimMesh::GetShaderInfo()
