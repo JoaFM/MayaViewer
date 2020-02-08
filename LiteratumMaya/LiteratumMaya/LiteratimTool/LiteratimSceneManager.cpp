@@ -29,6 +29,7 @@ LiteratimSceneManager::~LiteratimSceneManager()
 void LiteratimSceneManager::SetConnection(LiteratimNetworking* LitNetwork)
 {
 	m_LitNetwork = LitNetwork;
+	m_Worker.SetConnection(m_LitNetwork);
 }
 
 
@@ -55,6 +56,13 @@ void LiteratimSceneManager::TickMeshQuery()
 {
 	if (m_ActiveQuryHash != "")
 	{
+		if (m_Worker.IsReadForNextMesh())
+		{
+			ProgressToNextMesh();
+		}
+
+
+		/*
 		LiteratimMesh* LitMesh = m_SceneObjects[m_ActiveQuryHash];
 		if (!LitMesh->IsQuryDone())
 		{
@@ -64,6 +72,7 @@ void LiteratimSceneManager::TickMeshQuery()
 		{
 			ProgressToNextMesh();
 		}
+		*/
 	}
 }
 
@@ -89,6 +98,8 @@ void LiteratimSceneManager::ProgressToNextMesh()
 		m_ActiveQuryHash = (m_CurrUpdatemeshIterator->first);
 		m_CurrUpdatemeshIterator->second->StartQuery();
 	}
+	LiteratimMesh* LitMesh = m_SceneObjects[m_ActiveQuryHash];
+	m_Worker.QueryThisMesh(LitMesh);
 }
 
 void LiteratimSceneManager::RemoveSceneObject(std::string ItemToRemove)
@@ -138,10 +149,12 @@ void LiteratimSceneManager::TickCamera()
 				if (i!=15) sendCommand += ",";
 			}
 			sendCommand += "]}";
-			if (m_LitNetwork->LitSendMessage(sendCommand, ResponceHeaders::Command))
-			{
-				m_cameraHash = NewcameraHash;
-			}
+
+			m_Worker.SendDeferredCommand(sendCommand);
+// 			if (m_LitNetwork->LitSendMessage(sendCommand, ResponceHeaders::Command))
+// 			{
+ 				m_cameraHash = NewcameraHash;
+// 			}
 
 		}
 	}

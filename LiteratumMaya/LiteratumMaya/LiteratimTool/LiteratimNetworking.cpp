@@ -190,7 +190,7 @@ void LiteratimNetworking::ProcessIncommingCommand(json::JSON* obj)
 
 bool LiteratimNetworking::LitSendMessage(std::string message, ResponceHeaders CommandType)
 {
-	MGlobal::displayInfo(message.c_str());
+	std::lock_guard<std::mutex> guard(m_MU_SendMutex);
 
 	bool SendOK = true;
 	SendHeader head((int)(CommandType), (int)message.size());

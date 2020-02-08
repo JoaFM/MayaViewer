@@ -20,6 +20,7 @@
     <ClCompile Include="LiteratimTool\LiteratimMesh.cpp" />
     <ClCompile Include="LiteratimTool\LiteratimNetworking.cpp" />
     <ClCompile Include="LiteratimTool\LiteratimSceneManager.cpp" />
+    <ClCompile Include="LiteratimTool\LiteratimWorker.cpp" />
     <ClCompile Include="LiteratumMayaCmd.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -29,6 +30,7 @@
     <ClInclude Include="LiteratimTool\LiteratimMesh.h" />
     <ClInclude Include="LiteratimTool\LiteratimNetworking.h" />
     <ClInclude Include="LiteratimTool\LiteratimSceneManager.h" />
+    <ClInclude Include="LiteratimTool\LiteratimWorker.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <Keyword>Win32Proj</Keyword>

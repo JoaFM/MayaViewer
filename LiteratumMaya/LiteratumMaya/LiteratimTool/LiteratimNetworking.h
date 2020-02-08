@@ -4,6 +4,9 @@
 #pragma comment(lib, "ws2_32.lib")
 #include "BufferStack.h"
 
+#include <iostream>
+#include <thread>
+#include <mutex>
 
 class LiteratimSceneManager;
 
@@ -40,20 +43,18 @@ class LiteratimNetworking
 public:
 	LiteratimNetworking();
 	~LiteratimNetworking();
+	
 	bool Connect(LiteratimSceneManager* SceneManager);
 	bool Disconnect();
-
-
+	
 	void Tick();
 
-	//Communication
 	bool LitSendMessage(std::string message, ResponceHeaders CommandType);
-	
-	bool m_connected = false;
-
-	bool IsConnected()const { return m_connected; };
+	bool IsConnected() const { return m_connected; };
 
 private:
+	std::mutex m_MU_SendMutex;
+
 	char m_buf[4096];
 	BufferStack m_CurrentDataStream;
 
@@ -63,7 +64,7 @@ private:
 	//client state
 	CurrentState m_currentState = CurrentState::WatingForResponceHeader;
 	void ProcessIncomingData();
-
+	bool m_connected = false;
 
 	const int m_ResponceHeaderSize = 8;
 	int m_PackageResponceSize = -1;

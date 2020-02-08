@@ -400,7 +400,7 @@ void LiteratimMesh::SendMeshUpdate(SendBucket& sendBucket, int BucketIndex, Lite
 
 	float dataSent = (float)MessageJsonString.size() / 1024.0f;
 	MString feedback(std::to_string(dataSent).c_str());
-	MGlobal::displayInfo("Send mesh update: " + feedback + "kbps");
+	//MGlobal::displayInfo("Send mesh update: " + feedback + "kbps");
 	LitNetWork->LitSendMessage(MessageJsonString, ResponceHeaders::Command);
 }
 

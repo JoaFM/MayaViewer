@@ -47,6 +47,9 @@
     <ClCompile Include="BufferStack.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="LiteratimTool\LiteratimWorker.cpp">
+      <Filter>Source Files\LiteratimTool</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="LiteratimTool\LiteratimMain.h">
@@ -66,6 +69,9 @@
     </ClInclude>
     <ClInclude Include="External\json.hpp">
       <Filter>External</Filter>
+    </ClInclude>
+    <ClInclude Include="LiteratimTool\LiteratimWorker.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -316,7 +316,7 @@ namespace Viewer_Server
 
             try
             {
-                Console.WriteLine(data);
+              //  Console.WriteLine(data);
 
                 handler.BeginSend(byteData, 0, byteData.Length, 0,
                 new AsyncCallback(SendCallback), handler);
