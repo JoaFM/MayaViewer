@@ -10,5 +10,6 @@ public class MayaViewerEditorTarget : TargetRules
 		Type = TargetType.Editor;
 
 		ExtraModuleNames.AddRange( new string[] { "MayaViewer" } );
-	}
+
+    }
 }

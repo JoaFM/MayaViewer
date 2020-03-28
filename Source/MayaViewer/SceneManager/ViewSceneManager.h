@@ -91,6 +91,10 @@ public:
 	void SetMaterialInfo(TSharedPtr<FJsonObject> MaterialsInfoJson);
 	void CreateMesh(TSharedPtr<FJsonObject> InputString);
 	void DeleteMesh(TSharedPtr<FJsonObject> InputString);
+
+	virtual void BeginDestroy() override;
+
+	void ClearScene();
 public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)

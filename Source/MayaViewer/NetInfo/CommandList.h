@@ -28,7 +28,6 @@ public:
 
 public:
 	// Actoions OUT
-	void QuerySceneDecription();
 	void RequestObjectTransform(FString ObjectName);
 	void RequestObjectMeta(FString ObjectName);
 	void RequestObjectWholeData(FString ObjectName);

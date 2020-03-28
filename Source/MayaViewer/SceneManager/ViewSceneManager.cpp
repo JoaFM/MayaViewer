@@ -17,11 +17,7 @@ void ULiteratumSceneManager::Setup(UCommandList* CommandList, UWorld* ParentWorl
 	m_ParentWorld = ParentWorld;
 
 	UpdateSceneMaterialLibrary();
-
-
 }
-
-
 
 
 void ULiteratumSceneManager::UpdateSceneObjectTransfrom(TSharedPtr<FJsonObject> InputJsonObject)
@@ -98,12 +94,16 @@ void ULiteratumSceneManager::SetMaterialInfo(TSharedPtr<FJsonObject> MaterialsIn
 
 void ULiteratumSceneManager::CreateMesh(TSharedPtr<FJsonObject> InputString)
 {
-	FString ActorName = InputString->GetStringField("ObjectName");
-	ALiteratumActorBase* NewObj = m_ParentWorld->SpawnActor<ALiterarumMesh>(ALiterarumMesh::StaticClass(), FTransform::Identity);
-	NewObj->Setup(ActorName, this);
-	NewObj->OnConnect();
-	m_SceneActors.Add(ActorName, NewObj);
-	UE_LOG(LogTemp, Warning, TEXT("Created Mesh actor Object: %s"), *ActorName);
+	ALiteratumActorBase* ActorToDelete = GetSceneMeshActor(InputString->GetStringField("ObjectName"));
+	if (!IsValid(ActorToDelete))
+	{
+		FString ActorName = InputString->GetStringField("ObjectName");
+		ALiteratumActorBase* NewObj = m_ParentWorld->SpawnActor<ALiterarumMesh>(ALiterarumMesh::StaticClass(), FTransform::Identity);
+		NewObj->Setup(ActorName, this);
+		NewObj->OnConnect();
+		m_SceneActors.Add(ActorName, NewObj);
+		UE_LOG(LogTemp, Warning, TEXT("Created Mesh actor Object: %s"), *ActorName);
+	}
 }
 
 void ULiteratumSceneManager::DeleteMesh(TSharedPtr<FJsonObject> InputString)
@@ -114,6 +114,26 @@ void ULiteratumSceneManager::DeleteMesh(TSharedPtr<FJsonObject> InputString)
 	{
 		m_SceneActors.Remove(InputString->GetStringField("ObjectName"));
 		ActorToDelete->Destroy();
+	}
+}
+
+
+void ULiteratumSceneManager::BeginDestroy()
+{
+	Super::BeginDestroy();
+	ClearScene();
+}
+
+
+void ULiteratumSceneManager::ClearScene()
+{
+	for (auto SceneActor : m_SceneActors)
+	{
+		AActor* SA = (AActor*)SceneActor.Value;
+		if (IsValid(SA))
+		{
+			SA->Destroy();
+		}
 	}
 }
 
@@ -220,3 +240,5 @@ void ULiteratumSceneManager::SetMeshBucket(TSharedPtr<FJsonObject> MeshBucketsJs
 		UE_LOG(LogTemp, Error, TEXT("Tring to set mesh  data on an object that is not a mesh: %s"), *ObjectName);
 	}
 }
+
+

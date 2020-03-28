@@ -289,6 +289,9 @@ void LiteratimMesh::TickQuery(LiteratimNetworking* LitNetWork)
 		materialJumps.push_back(std::vector<int>());
 	}
 
+	sendBucket.VertPositions.reserve(m_PerBucketFaceCount * 6);
+	sendBucket.VertNormals.reserve(m_PerBucketFaceCount * 6);
+	sendBucket.IndexList.reserve(m_PerBucketFaceCount * 6);
 	{
 		unsigned int FaceCounter = m_CurrFaceIndex;
 		for (; FaceCounter < std::min(m_CurrFaceIndex + m_PerBucketFaceCount, m_FaceTriangles.length()); FaceCounter++)

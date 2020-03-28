@@ -141,11 +141,6 @@ void UCommandList::DeleteMesh(TSharedPtr<FJsonObject> InputString)
 }
 
 // --------------------  Out going Commands 
-void UCommandList::QuerySceneDecription()
-{
-	if (!IsValid(m_Server)) return;
-	m_Server->SendTextMessage("{\"Command\": \"GetSceneDescription\"}", ALiteratiumServer::ResponceHeaders::Command);
-}
 
 void UCommandList::RequestObjectTransform(FString ObjectName)
 {

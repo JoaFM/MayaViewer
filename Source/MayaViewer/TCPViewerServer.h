@@ -14,7 +14,7 @@
 class UCommandList;
 class ULiteratumSceneManager;
 
-
+class UTCPServer;
 
 UCLASS(Blueprintable, ClassGroup=(Literatum), meta=(BlueprintSpawnableComponent), hideCategories = (Rendering, Replication, Input, Base, Collision, Shape, Transform, Actor, LOD, Cooking))
 class MAYAVIEWER_API ALiteratiumServer : public AActor
@@ -25,8 +25,6 @@ public:
 	// Sets default values for this component's properties
 	ALiteratiumServer();
 
-	FSocket* SocketToServer;
-	
 	enum class CurrentState {
 		WaitingForPackage, 
 		WatingForResponceHeader
@@ -54,22 +52,24 @@ public:
 		 ULiteratumSceneManager* GetViewerScene();
 
 	UFUNCTION(BlueprintCallable)
-		void ConnectToServer();
-
-	UFUNCTION(BlueprintCallable)
 		void DirtyAll();
 
 	UFUNCTION(BlueprintCallable)
-		void DissconectToServer();
+		void CloseConnection();
 
 	UFUNCTION(BlueprintCallable)
 		bool IsConnected();
+
+	UFUNCTION(BlueprintCallable)
+		void DeleteAllActors();
+
 
 	void SendTextMessage(FString TextToSend, ResponceHeaders ResponceType);
 
 public:
 	virtual void BeginDestroy() override;
 	virtual void Tick(float DeltaSeconds) override;
+	virtual bool ShouldTickIfViewportsOnly() const override;
 
 protected:
 	//Commands 
@@ -79,12 +79,20 @@ protected:
 	UPROPERTY(VisibleAnywhere, Instanced, BlueprintReadOnly)
 		ULiteratumSceneManager* m_viewerScene = nullptr;
 
+	void ServerTick(float DeltaSecond);
 
 private:
+	UPROPERTY()
+		UTCPServer* m_server = nullptr;
+
 	CurrentState m_currentState = CurrentState::WatingForResponceHeader;
 	TArray<uint8> m_CurrentDataStream;
-	void ProcessDataStream();
+
+
 	const int m_ResponceHeaderSize = 8;
+
+
+	void ProcessDataStream();
 	TArray<char> RemoveRangeOnDataStream(int Size);
 
 	//Package Sizes
@@ -104,7 +112,9 @@ private:
 
 	void CloseConnection(bool CloseBecauseofError);
 
-	void SendResponceHeader(ResponceHeaders ResponceType, int32 ResponceSize);
+	bool SendResponceHeader(ResponceHeaders ResponceType, int32 ResponceSize);
 
-	bool RecvSocketData(FSocket *Socket, uint32 DataSize, FString& Msg);
+	bool RecvSocketData();
+
+	void MakeSureAServerIsUpAndReady();
 };

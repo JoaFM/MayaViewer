@@ -9,32 +9,38 @@
 #include "NetInfo/NetCameraInfo.h"
 #include "JsonObjectConverter.h"
 #include "NetInfo/CommandList.h"
+
 #include "SceneManager/ViewSceneManager.h"
+#include "Network/TCPServer.h"
 
 #include <EngineGlobals.h>
 #include <Runtime/Engine/Classes/Engine/Engine.h>
 #include "FileManagerGeneric.h"
 #include "Materials/Material.h"
 
+
+
+//#include "EditorViewportClient.h"
+
 // Sets default values for this component's properties
 ALiteratiumServer::ALiteratiumServer()
 {
-
 	SetActorTickEnabled(true);
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
-
-	// ...
 }
 
+
+bool ALiteratiumServer::ShouldTickIfViewportsOnly() const
+{
+	return true;
+}
 
 // Called when the game starts
 void ALiteratiumServer::BeginPlay()
 {
 	Super::BeginPlay();
-
-	// ...
-	
+	CloseConnection();
 }
 
 ULiteratumSceneManager* ALiteratiumServer::GetViewerScene()
@@ -43,22 +49,22 @@ ULiteratumSceneManager* ALiteratiumServer::GetViewerScene()
 }
 
 
-void ALiteratiumServer::ConnectToServer()
+void ALiteratiumServer::MakeSureAServerIsUpAndReady()
 {
 	LoadObjects();
 
-	SocketToServer = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->CreateSocket(NAME_Stream, TEXT("default"), false);
-
-	FIPv4Address ip(127, 0, 0, 1);
-	TSharedRef<FInternetAddr> addr = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->CreateInternetAddr();
-	addr->SetIp(ip.Value);
-	addr->SetPort(65432);
-
-	bool connected = SocketToServer->Connect(*addr);
-
-	
-
-	GEngine->AddOnScreenDebugMessage(1, 5.f, FColor::Red, TEXT("ConnectToServer"));
+	if (m_server == nullptr)
+	{
+		m_server = NewObject<UTCPServer>(this);
+	}
+	if (IsValid(m_server))
+	{
+		if (!(m_server->IsConnected() || m_server->IsListeningForConnection()))
+		{
+			m_server->StartAndClearServer(this);
+			DeleteAllActors();
+		}
+	}
 }
 
 
@@ -67,30 +73,23 @@ void ALiteratiumServer::DirtyAll()
 	m_CommandList->DirtyContent();
 }
 
-void ALiteratiumServer::DissconectToServer()
-{
-	if (SocketToServer == nullptr)
-	{
-		UE_LOG(LogTemp, Error, TEXT("TCPVIEW: %s"),  TEXT("No connection to close"));
-		return;
-	}
-	SendTextMessage("STOP", ResponceHeaders::ServerCommand);
-	bool successful = SocketToServer->Close();
-	UE_LOG(LogTemp, Warning, TEXT("TCPVIEW: %s"), (successful ? TEXT("Closed Connection":TEXT("Failed to close"))));
-	if (successful)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("DissconectToServer Sucsess"));
-	}
-	else
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("DissconectToServer Failed"));
-	}
-}
+
 
 bool ALiteratiumServer::IsConnected()
 {
-	if (!SocketToServer) return false;
-	return true;
+	if (IsValid(m_server))
+	{
+		return m_server->IsConnected();
+	}
+	return false;
+}
+
+void ALiteratiumServer::DeleteAllActors()
+{
+	if (IsValid(m_viewerScene))
+	{
+		m_viewerScene->ClearScene();;
+	}
 }
 
 void ALiteratiumServer::SendTextMessage(FString TextToSend, ResponceHeaders ResponceType)
@@ -108,53 +107,42 @@ void ALiteratiumServer::SendTextMessage(FString TextToSend, ResponceHeaders Resp
 	int32 sent = 0;
 	m_uploadAmount += size;
 
-	SendResponceHeader(ResponceType, size);
-	bool successful = SocketToServer->Send((uint8*)TCHAR_TO_UTF8(serializedChar), size, sent);
-	UE_LOG(LogTemp, Log, TEXT("%s Sent %s"), (successful ? TEXT(">>>"):TEXT("ERROR!! : ")), serializedChar);
-	if (!successful)CloseConnection(true);
-	
+	//#TODO use the server to send the data here
+	if (SendResponceHeader(ResponceType, size))
+	{
+		bool successful = m_server->Send((uint8*)TCHAR_TO_UTF8(serializedChar), size, sent);
+		UE_LOG(LogTemp, Log, TEXT("%s Sent %s"), (successful ? TEXT(">>>") : TEXT("ERROR!! : ")), serializedChar);
+	}
 }
 
-void ALiteratiumServer::SendResponceHeader(ResponceHeaders ResponceType, int32 ResponceSize)
+bool ALiteratiumServer::SendResponceHeader(ResponceHeaders ResponceType, int32 ResponceSize)
 {
-	if (!SocketToServer) return;
+	if (!IsConnected()) {
+		return false;
+	}
 
 	int32 HeaderType = (int32)ResponceType;
 
-	//TODO:: The Sent could fail here!!
 	int32 sent = 0;
-	SocketToServer->Send((uint8*)(&HeaderType), sizeof(int), sent);
-	SocketToServer->Send((uint8*)(&ResponceSize), sizeof(int), sent);
+	if (!m_server->Send((uint8*)(&HeaderType), sizeof(int), sent)) 
+	{
+		return false;
+	}
+	m_uploadAmount += 4;
 
-	m_uploadAmount += 8;
+	if (!m_server->Send((uint8*)(&ResponceSize), sizeof(int), sent)) 
+	{
+		return false;
+	}
+	m_uploadAmount += 4;
+
+	return true;
 }
 
-bool ALiteratiumServer::RecvSocketData(FSocket *Socket, uint32 DataSize, FString& Msg)
+bool ALiteratiumServer::RecvSocketData()
 {
-	if(!Socket) return false;
-	if (!SocketToServer->HasPendingData(DataSize)) return false;
-
-	FArrayReaderPtr Datagram = MakeShareable(new FArrayReader(true));
-
-	Datagram->Init(0,FMath::Min(DataSize, 65507u));
-
-	
-	int32 BytesRead = 0;
-	if (Socket->Recv(Datagram->GetData(), Datagram->Num(), BytesRead))
-	{
-		m_downloadAmount += (float)BytesRead;
-		if (BytesRead)
-		{
-			
-			uint8* DataCpy = Datagram->GetData();
-			
-			for (int32 i = 0; i < BytesRead; i++)
-			{
-				m_CurrentDataStream.Add(DataCpy[i]);
-			}
-		}
-	}
-
+	if (!IsConnected()) return false;
+	m_downloadAmount += m_server->GetPendingDataFromSocket(m_CurrentDataStream);
 	return true;
 }
 
@@ -162,27 +150,41 @@ bool ALiteratiumServer::RecvSocketData(FSocket *Socket, uint32 DataSize, FString
 void ALiteratiumServer::BeginDestroy()
 {
 	Super::BeginDestroy();
-	DissconectToServer();
+	DeleteAllActors();
+	CloseConnection();
 }
 
-void ALiteratiumServer::Tick(float DeltaSeconds)
+void ALiteratiumServer::ServerTick(float DeltaSeconds)
 {
-	Super::Tick(DeltaSeconds);
+	//	#TODO Move the editor camera
+	// 	FViewportCameraTransform CamCam;
+	// 	CamCam.GetLocation();
+
+	if (m_server)
+	{
+		m_server->ServerTick();
+	}
+
+	MakeSureAServerIsUpAndReady();
 
 	FString MSG;
-	RecvSocketData(SocketToServer, 1024, MSG);
-	ProcessDataStream();
+	//#TODO get this to ask stuff from the server
 
-	if (!SocketToServer)
+
+	GEngine->AddOnScreenDebugMessage(5, 1.f, FColor::Purple, TEXT("3D App is %s to Viewer"), (IsConnected() ? TEXT("Connected") : TEXT("Not Connected")));
+	GEngine->AddOnScreenDebugMessage(5, 1.f, FColor::Purple, TEXT("Viewer is%sfor 3D App Connection"), (m_server->IsListeningForConnection() ? TEXT(" ") : TEXT(" Not ")));
+
+	if (!IsConnected())
 	{
-		GEngine->AddOnScreenDebugMessage(5, 1.f, FColor::Purple, TEXT("Not Connected To Server"));
 		return;
 	}
+
+	RecvSocketData();
+	ProcessDataStream();
 
 	if (IsValid(m_CommandList) && m_SceneUpdateTimer > m_SceneUpdateTimerMax)
 	{
 		m_SceneUpdateTimer = 0;
-		//m_CommandList->QuerySceneDecription();
 	}
 	else
 	{
@@ -192,18 +194,25 @@ void ALiteratiumServer::Tick(float DeltaSeconds)
 	m_downloadAmountTime += DeltaSeconds;
 	if (m_downloadAmountTime > 1.0f)
 	{
-		GEngine->AddOnScreenDebugMessage(5, 1.f, FColor::Green, FString::Printf(TEXT("down ................ %s kbs"),* FString::SanitizeFloat(m_downloadAmount / 1024.0f)));
-		GEngine->AddOnScreenDebugMessage(6, 1.f, FColor::Red,	FString::Printf(TEXT("Up .................. %s kbs"), *FString::SanitizeFloat(m_uploadAmount / 1024.0f)));
+		GEngine->AddOnScreenDebugMessage(5, 1.f, FColor::Green, FString::Printf(TEXT("down ................ %s kbs"), *FString::SanitizeFloat(m_downloadAmount / 1024.0f)));
+		GEngine->AddOnScreenDebugMessage(6, 1.f, FColor::Red, FString::Printf(TEXT("Up .................. %s kbs"), *FString::SanitizeFloat(m_uploadAmount / 1024.0f)));
 		m_downloadAmount = m_uploadAmount = 0;
 
-		GEngine->AddOnScreenDebugMessage(8, 1.f, FColor::Red,	FString::Printf(TEXT("Messages sent ...... %d "), (int32)(m_actionsSent )));
-		GEngine->AddOnScreenDebugMessage(9, 1.f, FColor::Red,	FString::Printf(TEXT("Commands Processed . %d "), (int32)(m_actionsProcessed)));
+		GEngine->AddOnScreenDebugMessage(8, 1.f, FColor::Red, FString::Printf(TEXT("Messages sent ...... %d "), (int32)(m_actionsSent)));
+		GEngine->AddOnScreenDebugMessage(9, 1.f, FColor::Red, FString::Printf(TEXT("Commands Processed . %d "), (int32)(m_actionsProcessed)));
 
-		 m_actionsSent = m_actionsProcessed = 0;
+		m_actionsSent = m_actionsProcessed = 0;
 
 
-		 m_downloadAmountTime = 0;
+		m_downloadAmountTime = 0;
 	}
+}
+
+
+void ALiteratiumServer::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	ServerTick(DeltaSeconds);
 }
 
 void ALiteratiumServer::ProcessDataStream()
@@ -235,8 +244,8 @@ void ALiteratiumServer::ProcessDataStream()
 		}
 		else if (m_currentState == CurrentState::WaitingForPackage)
 		{
-			m_actionsProcessed++;
 			if (m_CurrentDataStream.Num() < m_PackageResponceSize) return;
+			m_actionsProcessed++;
 			TArray<char> Command = RemoveRangeOnDataStream(m_PackageResponceSize);
 			dataProcessed = true;
 
@@ -293,13 +302,22 @@ void ALiteratiumServer::LoadObjects()
 	}
 	m_CommandList->Setup(m_viewerScene, this);
 	m_viewerScene->Setup(m_CommandList, GetWorld());
-
 }
 
 
 
 void ALiteratiumServer::CloseConnection(bool CloseBecauseofError)
 {
-	SocketToServer->Close();
-	SocketToServer = nullptr;
+	m_server->Disconnect();
+}
+
+void ALiteratiumServer::CloseConnection()
+{
+	SendTextMessage("STOP", ResponceHeaders::ServerCommand);
+	m_CurrentDataStream.Empty();
+
+	if (IsValid(m_server))
+	{
+		m_server->Disconnect();
+	}
 }
