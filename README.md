@@ -11,3 +11,6 @@ This tool has essential 3 parts
 * TCP/IP server. That Maya and unreal can connect to. The idea was also that you could have multiple clients ( For example 2 unreals lisning to 1 maya)
 * Maya plugin: this tool would look at your maya scene and send the camera and mesh data to the server, that in turn would pass it to unreal.
 * Unreal Plugin that would read the camera, mesh and material data and generate the content in Unreal. 
+
+See it in action
+https://youtu.be/N92HKDVrG80
